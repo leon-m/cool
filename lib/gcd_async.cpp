@@ -111,6 +111,9 @@ void writer::set_idle()
 
 void writer::write_cb(int fd, std::size_t n)
 {
+  if (m_remain == 0)
+    return;
+  
   auto res = ::write(fd, m_position, m_remain);
   
   // upon error disable current write operation and invoke error callback

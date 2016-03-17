@@ -48,6 +48,10 @@ else()
             OUTPUT_VARIABLE XDISPATCH_WC_NUMBER
             OUTPUT_STRIP_TRAILING_WHITESPACE
         )
+        if(NOT XDISPATCH_WC_NUMBER)
+            set(XDISPATCH_WC_NUMBER "0")
+        endif()
+
     else() # fallback, no revision use date&time
         set(XDISPATCH_WC_REVISION "")
         set(XDISPATCH_WC_NUMBER "0")
