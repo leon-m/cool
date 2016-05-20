@@ -881,19 +881,19 @@ class fs_observer : public entrails::async_source<std::function<void(unsigned lo
    */
   enum Flags {
     //! The observed file system object was deleted.
-    Delete    = DISPATCH_VNODE_DELETE,
+    Delete     = DISPATCH_VNODE_DELETE,
     //! Write operation occurred on the observed file system object.
-    Write     = DISPATCH_VNODE_WRITE,
+    Write      = DISPATCH_VNODE_WRITE,
     //! The observed file system object changed in size.
-    Extend    = DISPATCH_VNODE_EXTEND,
+    Extend     = DISPATCH_VNODE_EXTEND,
     //! The file system object metadata changed.
-    Atributes = DISPATCH_VNODE_ATTRIB,
+    Attributes = DISPATCH_VNODE_ATTRIB,
     //! The link count of the observed file system object changed.
-    Link      = DISPATCH_VNODE_LINK,
+    Link       = DISPATCH_VNODE_LINK,
     //! The observed file system object was renamed.
-    Rename    = DISPATCH_VNODE_RENAME,
+    Rename     = DISPATCH_VNODE_RENAME,
     //! The observed file system object was revoked.
-    Revoke    = DISPATCH_VNODE_REVOKE
+    Revoke     = DISPATCH_VNODE_REVOKE
   };
 
  private:
