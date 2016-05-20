@@ -69,7 +69,7 @@ enum Kind {
 };
 
 /**
- * Enumeration listing possible attributes of IP adddress.
+ * Enumeration listing possible attributes of IP address.
  */
 enum Attribute
 {
@@ -116,13 +116,13 @@ class address
   }
   virtual ~address() { /* noop */ }
   /**
-   * Address comparion.
+   * Address comparison.
    *
    * @return true if two address objects contain the same IP address
    * @return false if IP addresses in two address objects are different
    *
    * @note In general, two addresses that differ in kind() or version() do
-   *   not comapre equal. However, the @ref cool::net::ipv6::host "IPv6 host" addresses
+   *   not compare equal. However, the @ref cool::net::ipv6::host "IPv6 host" addresses
    *   that represent the @ref ipv4::host "IPv4 host" addresses mapped into
    *   @ref cool::net::ip::IPv6 "IPv6" address space with either
    *   @ref ipv6::rfc_ipv4map or @ref ipv6::rfc_ipv4translate network prefix
@@ -376,7 +376,7 @@ class network : public address
    * @return true the specified IP address is either a host on this network
    *    or a sub-network of this network.
    *
-   * @note IPv6 networ does no contain IPv4 hosts or sub-networks, and vice versa.
+   * @note IPv6 network does not contain IPv4 hosts or sub-networks, and vice versa.
    */
   virtual bool has(const address& address) const = 0;
   virtual Kind kind() const override { return NetworkAddress; }
@@ -405,7 +405,7 @@ enum Style {
    */
   Canonical,
   /**
-   * Strictly cannonical format as specified by RFC 5952 with no special
+   * Strictly canonical format as specified by RFC 5952 with no special
    * treatment for IPv4 mapped addresses.
    */
   StrictCanonical,
@@ -420,7 +420,7 @@ enum Style {
    * This style yields a visual presentation Microsoft developed
    * for use in UNC addresses without <tt>.ipv6-literal.net</tt> suffix.
    * In this presentation dashes ('<tt>-</tt>') are used instead of colons
-   * and no special visualization is used for spefial network prefixes.
+   * and no special visualization is used for special network prefixes.
    * Example: <tt>2001-db8-</tt><tt>-8-32</tt>
    */
   Microsoft,
@@ -656,7 +656,7 @@ extern const host unspecified;
  *
  * The IPv6 network prefix for IPv4 @ref ipv4::host "host" addresses
  * mapped into IPv6 address space via Stateless IP/ICMP Translation (SIIT)
- * mechanism, as specified in RFC 4291.  Addresses within this range should
+ * mechanism, as specified in RFC 4291. Addresses within this range should
  * not appear on the public Internet.
  */
 extern const network rfc_ipv4map;
@@ -700,14 +700,14 @@ extern const network rfc_local;
 /**
  * Reserved IPv6 address range fe80::/10.
  *
- * This block is is reserved for link local addresses. The actuall allocation
+ * This block is is reserved for link local addresses. The actual allocation
  * range for link local addresses is fe80::/64.
  */
 extern const network rfc_link;
 /**
  * Reserved IPv6 address range ff00::/8.
  *
- * This block is is reserved for multicast addresses.  */
+ * This block is is reserved for multicast addresses. */
 extern const network rfc_mcast;
 
 } // namespace ipv6
@@ -1066,8 +1066,8 @@ extern void parse(std::istream&, cool::net::ip::address&);
  * @ingroup net-global
  * Binary compare two IP addresses.
  *
- * @return true if two addesses are binary equal
- * @return false if t wo addresses are binary different
+ * @return true if two addresses are binary equal
+ * @return false if two addresses are binary different
  */
 inline bool operator ==(const cool::net::ip::address& lhs, const cool::net::ip::address& rhs)
 {
@@ -1077,8 +1077,8 @@ inline bool operator ==(const cool::net::ip::address& lhs, const cool::net::ip::
  * @ingroup net-global
  * Binary compare two IP addresses.
  *
- * @return false if two addesses are binary equal
- * @return true if t wo addresses are binary different
+ * @return false if two addresses are binary equal
+ * @return true if two addresses are binary different
  */
 inline bool operator !=(const cool::net::ip::address& lhs, const cool::net::ip::address& rhs)
 {
@@ -1118,7 +1118,7 @@ inline std::ostream& operator <<(std::ostream& os, const cool::net::ip::address&
  * by appending a <tt>/</tt> character followed by an integer number to the
  * address, e.g. <tt>::%ffff:0:0/96</tt>.
  *
- * The reading of the input stream will stop at the first characted that cannot be
+ * The reading of the input stream will stop at the first character that cannot be
  * interpreted as a part of the address. This character will be the next
  * character available in the input stream.
  *

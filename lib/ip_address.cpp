@@ -527,7 +527,7 @@ cool::net::ipv6::binary_t _parse(std::istream& is)
         break;
 
       case '.': // seems to be dotted-quad ... some damage was already done, undo it
-        if (delim == '-')  // ... but can't   have it with Microsoft notation
+        if (delim == '-')  // ... but can't have it with Microsoft notation
         {
           is.unget();
           loop = false;
@@ -706,7 +706,7 @@ bool host::equals(const ip::address &other) const
 
 void host::visualize(std::ostream& os) const
 {
-  // Statless IP/ICMP Translation prefixed addresses are shown in
+  // Stateless IP/ICMP Translation prefixed addresses are shown in
   // quad-dotted format
   if (in(rfc_ipv4map) || in(rfc_ipv4translate))
     visualize(os, DottedQuad);

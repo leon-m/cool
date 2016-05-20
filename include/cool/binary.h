@@ -50,7 +50,7 @@ template <std::size_t Size> class binary
     ::memset(m_data, 0, Size);
   }
   /**
-   * Construts a binary buffer from and array. The byte array is assumed
+   * Constructs a binary buffer from an array. The byte array is assumed
    * to be at least as large as this binary buffer.
    */
   binary(uint8_t const data[])
@@ -61,7 +61,7 @@ template <std::size_t Size> class binary
    * Constructs a binary buffer and initializes its values from the initialization
    * least. If the list is larger than the binary buffer, excessive bytes are
    * ignored. If the list is shorter than the buffer, only first few bytes
-   * of of the buffer are initialized and the remaining elements are set to 0.
+   * of the buffer are initialized and the remaining elements are set to 0.
    */
   binary(std::initializer_list<uint8_t> args)
   {
@@ -206,7 +206,7 @@ template <std::size_t Size> class binary
    *
    * @param data byte array, right hand side operand
    * @return new binary buffer with results
-   * @note The operator assumes that the byte array is at elast as large as the
+   * @note The operator assumes that the byte array is at least as large as the
    *   binary buffer.
    */
   binary operator &(uint8_t const data[]) const
@@ -238,7 +238,7 @@ template <std::size_t Size> class binary
    *
    * @param data byte array, right hand side operand
    * @return new binary buffer with results
-   * @note The operator assumes that the byte array is at elast as large as the
+   * @note The operator assumes that the byte array is at least as large as the
    *   binary buffer.
    */
   binary operator |(uint8_t const data[]) const
@@ -270,7 +270,7 @@ template <std::size_t Size> class binary
    *
    * @param data byte array, right hand side operand
    * @return new binary buffer with results
-   * @note The operator assumes that the byte array is at elast as large as the
+   * @note The operator assumes that the byte array is at least as large as the
    *   binary buffer.
    */
   binary operator ^(uint8_t const data[]) const

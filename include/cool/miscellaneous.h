@@ -72,15 +72,15 @@ class identified
  /**
   * Move assignment operator.
   *
-  * The move assignment operator resets the identification of the original to
-  * value 0.
+  * The move assignment operator resets the identification of the original
+  * to value 0.
   */
   dlldecl identified& operator =(identified&&);
  /**
   * Create a clone of @ref identified object.
   *
-  * Creates a close of @ref identified object with the same numerical
-  * identification a original object.
+  * Creates a clone of @ref identified object with the same numerical
+  * identification as the original object.
   *
   * @param original Object to clone
   */
@@ -88,8 +88,8 @@ class identified
   /**
    * Create and return a clone of @ref identified object.
    *
-   * Creates and returns a close of @ref identified object with the same numerical
-   * identification a original object.
+   * Creates and returns a clone of @ref identified object with the same numerical
+   * identification as the original object.
    *
    * @param original Object to clone
    * @return A clone of the original object
@@ -112,13 +112,13 @@ class identified
  * Base class for named instances.
  *
  * This class can be used as a base class for classes whose instances
- * are to have a program-wide unique terxtual name. The name has the following
+ * are to have a program-wide unique textual name. The name has the following
  * format:
  *
  *   <i>prefix</i><tt>-</tt><i>numerical_id</i>
  *
  * where the <i>prefix</i> is a text provided at the @ref named object
- * construction and the <i>numerical_id</i> a unique numerical identification
+ * construction and the <i>numerical_id</i> is a unique numerical identification
  * provided by @ref identified base class.
  *
  * @warning Copy assignment and copy construction will create an exact clone
@@ -183,16 +183,16 @@ class named : public identified
    * Creates a new @ref named object and moves the name from original to the
    * new object. The name of the original object is set to <tt>moved-0</tt>.
    *
-   * @param origial Object which name to move.
+   * @param original Object whose name to move.
    */
   dlldecl named(named&& original);
   /**
-   * Move assignement operator.
+   * Move assignment operator.
    *
    * Creates and returns a new @ref named object and moves the name from original to the
    * new object. The name of the original object is set to <tt>moved-0</tt>.
    *
-   * @param origial Object which name to move.
+   * @param original Object whose name to move.
    * @return A clone of the original object.
    */
   dlldecl named& operator =(named&&);

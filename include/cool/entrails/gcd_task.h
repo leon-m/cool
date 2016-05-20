@@ -112,10 +112,10 @@ dlldecl void kickstart(taskinfo* info_, const std::exception_ptr& e_);
 // executor functions
 dlldecl void task_executor(void* ctx);
 
-// entry point entered from the tast_executor - receives parameters and,
+// entry point entered from the task_executor - receives parameters and,
 // through template specialization, retains enough type information
 // to interpret task call result, rebinds the next task from the sequence and
-// schedules it for execution in selected runner
+// schedules it for execution in the selected runner
 template <typename ResultT> class task_entry
 {
  public:
@@ -146,7 +146,7 @@ template <typename ResultT> class task_entry
   }
 };
 
-// specialization for void type
+// Specialization for void type
 template<> class task_entry<void>
 {
  public:
@@ -183,7 +183,7 @@ template<> class task_entry<void>
 // executor functions
 dlldecl void executor(void* ctx);
 
-// Executor for tasks returning value
+// Executor for tasks returning a value
 #if defined(INCORRECT_VARIADIC)
 template <typename Ret>
 void execute_ret(vow<Ret>& v, const std::function<Ret()>& task)
@@ -197,7 +197,7 @@ void execute_ret(vow<Ret>& v, const std::function<Ret()>& task)
   }
 }
 
-// Executor for tasks not returnig value
+// Executor for tasks not returning a value
 inline void execute_void(vow<void>& v, const std::function<void()>& task)
 {
   try
@@ -213,6 +213,7 @@ inline void execute_void(vow<void>& v, const std::function<void()>& task)
 
 #else
 
+// Executor for tasks returning a value
 template <typename Ret, typename... Args>
 void execute_ret(vow<Ret>& v, const std::function<Ret(const Args&...)>& task, Args&&... args)
 {
@@ -225,7 +226,7 @@ void execute_ret(vow<Ret>& v, const std::function<Ret(const Args&...)>& task, Ar
     v.set(std::current_exception());
   }
 }
-// Executor for tasks not returnig value
+// Executor for tasks not returning a value
 template <typename... Args>
 void execute_void(vow<void>& v, const std::function<void(const Args&...)>& task, Args&&... args)
 {
@@ -247,9 +248,9 @@ void execute_void(vow<void>& v, const std::function<void(const Args&...)>& task,
 
 // The subtask is a partially bound call to subtask_binder::rebind,
 // with the user Callable, user supplied parameters and infrastructural parameters
-// already bound, but with a  placeholder left for the result of previous task.
+// already bound, but with a placeholder left for the result of previous task.
 // This result known only after the previous task executes. The call to rebind
-// from task_entry::entry_point with the missing ressult will thus form a
+// from task_entry::entry_point with the missing result will thus form a
 // complete task_t compatible function which can be submitted as a next task.
 template <typename TaskResultT, typename SubtaskResultT, typename Function
 #if !defined(INCORRECT_VARIADC)
@@ -276,7 +277,7 @@ template <typename TaskResultT, typename SubtaskResultT, typename Function
   }
 };
 
-// specialization used from task<void>::then doesn't leave a placeholder since
+// Specialization used from task<void>::then doesn't leave a placeholder since
 // there will be no result available.
 template <typename SubtaskResultT, typename Function
 #if !defined(INCORRECT_VARIADC)
@@ -310,8 +311,8 @@ template <typename SubtaskResultT, typename Function
 // ====== Binders for runner::run() method
 // Binds the correct executor_* with the task to execute and its parameters. Since
 // template functions cannot be partially specialized, this has to be static method
-// wrapped into template class. Two specializations are necessary, one for
-// tasks returning value and the other for void tasks.
+// wrapped into a template class. Two specializations are necessary, one for
+// tasks returning a value and the other for void tasks.
 
 
 #if defined(INCORRECT_VARIADIC)

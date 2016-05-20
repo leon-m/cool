@@ -30,7 +30,7 @@ void aim<void>::then(const aim_base<void>::state_t::success_cb_t& scb,
                      const aim_base<void>::state_t::failure_cb_t& fcb)
 {
   bool fail;
-  // if the result is already available fire immediatelly
+  // if the result is already available, fire immediately
   if (then_base(fail, scb, fcb))
   {
     try

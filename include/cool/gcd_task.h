@@ -125,14 +125,14 @@ class runner : public named
    *     FIFO order, but the order of their completion is not defined. The tasks
    *     may or may not be executed by multiple threads.
    *
-   * @param run_order DISPATCH_QUEUE_SERIAL for sequential task exection or
-   *    DISPATCH_QUEUE_CONCURRENT for concurrent exection. The defaul value
+   * @param run_order DISPATCH_QUEUE_SERIAL for sequential task execution or
+   *    DISPATCH_QUEUE_CONCURRENT for concurrent execution. The default value
    *    is DISPATCH_QUEUE_SERIAL
    *
    * @exception cool::exception::create_failure thrown if a new instance cannot
    *   be created.
    *
-   * @note The runner object is created in started state and is immediatelly
+   * @note The runner object is created in started state and is immediately
    *   capable of executing tasks.
    *
    * <b>Portability</b><br>
@@ -196,7 +196,7 @@ class runner : public named
    * @param task Callable object to be executed
    * @param args A list of zero or more parameters to be passed to the Callable
    *             object when it starts executing.
-   * @return cool::basis::aim object of the type instantitated with the type of
+   * @return cool::basis::aim object of the type instantiated with the type of
    *     the return value of the Callable object, or void if there is no
    *     return value.
    * @exception cool::exception::illegal_state thrown if this runner was closed.
@@ -206,8 +206,8 @@ class runner : public named
    *   synchronization in multi-threading programming model. As such it refers
    *   to a shared state which is shared with the associated cool::basis::vow.
    *   The shared state is guarded by internal @c std::mutex. The thread
-   *   safety may incurr an unnecessary overhead in pure asynchronous programming
-   *   model. When multi-thread synchronization is not the issue, use
+   *   safety may incur an unnecessary overhead in pure asynchronous programming
+   *   model. When multi-thread synchronization is not an issue, use
    *   @ref cool::gcd::task::task "task" approach instead.
    *
    * @note
@@ -324,13 +324,13 @@ class runner : public named
   dlldecl static std::shared_ptr<runner> sys_background_ptr();
 #endif
   /**
-   * Returns library defauly runner.
+   * Returns library default runner.
    *
    * @note This runner executes tasks sequentially.
    */
   dlldecl static const runner& cool_default();
   /**
-   * Returns library defauly runner.
+   * Returns library default runner.
    *
    * @note This runner executes tasks sequentially.
    */
@@ -366,40 +366,40 @@ class runner : public named
 };
 
 /**
- * A class representing the task, or a sequence of tasks, to be synchronouly
+ * A class representing the task, or a sequence of tasks, to be synchronously
  * executed in one or more task queues.
  *
  * The task interface represents an alternative to the runner::run() method which
  * is more suitable for the asynchronous processing model. While both models
- * provide the means for sequential execution of tasks, and tranfering the
+ * provide the means for sequential execution of tasks and transferring the
  * results (return values) of preceding task to the next task, the task
  * interface provides the following advantages over the runner::run() method:
  *
- * - the runner::run() produced an pair of @ref cool::basis::aim "aim"/@ref cool::basis::vow "vow"
- *   objects for each tun task. In additon, sequencing the tasks via one of
+ * - the runner::run() produced a pair of @ref cool::basis::aim "aim"/@ref cool::basis::vow "vow"
+ *   objects for each tun task. In addition, sequencing the tasks via one of
  *   @ref cool::basis::aim::then() "aim::then()" methods produced another pair for each task
  *   added to the sequence. And since these objects were primarily designed to
  *   support multi-threading model, each such pair shares a shared state guarded
  *   by std::mutex, which unnecessarily slows down the asynchronous processing.
- * - the @ref cool::basis::aim "aim" offerend no guaranties about which 
+ * - the @ref cool::basis::aim "aim" offered no guaranties about which
  *   @ref cool::gcd::task::runner "runner" will execute the tasks supplied via
  *   @ref cool::basis::aim::then() "aim::then()" method. Depending on
- *   the availaility of the results it could have been the runner executing the
+ *   the availability of the results it could have been the runner executing the
  *   first task, or the runner calling runner::run method. The task interface
- *   not only guaranties which runner will execute the next task in the
- *   sequence but also lets the user code to select a different runner than
+ *   not only guarantees which runner will execute the next task in the
+ *   sequence but also allows the user code to select a different runner than
  *   the default.
  *
- * The task objects are not copiable but are moveable. They cannot be constructed
+ * The task objects are not copyable but are movable. They cannot be constructed
  * directly but are created either by @ref cool::gcd::task::factory "task factory"
  * or by one of the task::then() method templates.
  *
- * @exception cool::gcd::task::runner_not_available thrown if, when the asks are
- *   to be submitted for execution to theire respective
- *   @ref cool::gcd::task::runner "runner" task queues, the destination runner
- *   not longer exists. In this case, the task library will throw this exception,
- *   which will be passed to the error handler provided throguh one of the
- *   @ref task::then() "then()" methods. Note however, than if the error handler
+ * @exception cool::gcd::task::runner_not_available thrown when the tasks are
+ *   to be submitted for execution to their respective
+ *   @ref cool::gcd::task::runner "runner" task queues, but the destination runner
+ *   no longer exists. In this case, the task library will throw this exception,
+ *   which will be passed to the error handler provided through one of the
+ *   @ref task::then() "then()" methods. Note however, that if the error handler
  *   was to be run on the same runner that is no longer available, the error
  *   handler will not be scheduled to run and this exception will disappear
  *   unnoticed. This exception is thrown during the task sequence execution and is
@@ -407,7 +407,7 @@ class runner : public named
  *   task object(s).
  *
  * @exception cool::exception::illegal_state thrown immediately by task methods
- *   if the task object on which the methods was tried is no longer valid. This
+ *   if the task object on which the method was tried is no longer valid. This
  *   exception is synchronous with regard to the caller of the method.
  *
  *
@@ -416,17 +416,17 @@ class runner : public named
  * Linux using gcc 5.0 or later, and Microsoft Windows using
  * Visual Studio 2013 or later.
  *
- * The following are limitations applicable to Microsft Windows:
+ * The following are limitations applicable to Microsoft Windows:
  *
  * 1. when using Visual Studio 2013:
  *   - user Callable objects may not accept parameters, except for error
  *     handlers which must be of @ref error_handler_t compatible type,
- *     and  the mandatory first parameter if preceding task returns value.
+ *     and the mandatory first parameter if preceding task returns value.
  *
  * 2. when using Visual Studio 2015:
  *   - user Callable objects may not accept parameters, except for error
  *     handlers which must be of @ref error_handler_t compatible type,
- *     and  the mandatory first parameter if preceding task returns value.
+ *     and the mandatory first parameter if preceding task returns value.
  */
 template <typename Result> class task
 {
@@ -474,13 +474,13 @@ template <typename Result> class task
    *    If the return value type of this task is non-void, the Callable's first
    *    argument must be @c const @c ResultT&, where ResultT is the type of the
    *    return value of this task's Callable.
-   * @tparam Args... the template parameter pack of additional argumets passed to
+   * @tparam Args... the template parameter pack of additional arguments passed to
    *    the user supplied Callable, after the optional first argument.
    *
    * The method must be provided with the following parameters:
    * @param err_ the error handler to be called if this task throws an exception
    *    during its execution.
-   * @param func_ the user supplied Callable to be shecduled for execution upon
+   * @param func_ the user supplied Callable to be scheduled for execution upon
    *    the successful completion of this task.
    * @param args_ additional arguments to be passed to the user provided
    *    Callable when it begins the execution. Note that the additional arguments
@@ -543,7 +543,7 @@ template <typename Result> class task
    *    If the return value type of this task is non-void, the Callable's first
    *    argument must be @c const @c ResultT&, where ResultT is the type of the
    *    return value of this task's Callable.
-   * @tparam Args... the template parameter pack of additional argumets passed to
+   * @tparam Args... the template parameter pack of additional arguments passed to
    *    the user supplied Callable, after the optional first argument.
    *
    * The method must be provided with the following parameters:
@@ -639,7 +639,7 @@ template <typename Result> class task
    *   passed to any preceding task through @ref then(), or the runner specified
    *   at @ref factory::create() if none.
    *
-   * @note This method, if used, finalizes the task sequence. Althought it is
+   * @note This method, if used, finalizes the task sequence. Although it is
    *   technically possible to use @ref then() on the task returned by this
    *   method, this and any subsequent tasks would never get run.
    */
@@ -661,7 +661,7 @@ template <typename Result> class task
    *   a new task object. All further operations must be performed on a new
    *   object.
    *
-   * @note This method, if used, finalizes the task sequence. Althought it is
+   * @note This method, if used, finalizes the task sequence. Although it is
    *   technically possible to use @ref then() on the task returned by this
    *   method, this and any subsequent tasks would never get run.
    */
@@ -746,7 +746,7 @@ template <typename Result> class task
 /**
  * Specialization of task class template for @c void Callable objects.
  *
- * This spcializaiton is used for user Callable objects which do not return
+ * This specialization is used for user Callable objects which do not return
  * value. Its methods are the same as those of @ref cool::gcd::task::task "task"
  * class template.
  *
@@ -962,7 +962,7 @@ class factory
  *
  * Grouping asynchronous tasks allows for aggregate synchronization. The
  * application code can submit multiple tasks and track when they all complete,
- * event though they might use different @ref cool::gcd::task::runner "runners".
+ * even though they might use different @ref cool::gcd::task::runner "runners".
  * Such synchronization may be helpful when the application cannot progress
  * until all of the asynchronous tasks are complete.
  *
@@ -972,7 +972,7 @@ class factory
  * <b>Thread Safety</b><br>
  * The group objects are mostly, but not entirely thread safe. In particular,
  * it may happen that wait() returns prematurely if called from one thread
- * while another thread is adding tasks to the group. This limitiation extends
+ * while another thread is adding tasks to the group. This limitation extends
  * to the clones of the group object.
  */
 class group
@@ -1064,7 +1064,7 @@ class group
    *
    * Sets the application defined handler to be called when all asynchronous
    * tasks currently in the group complete the execution. If no tasks are
-   * running or are scheduled to run the handler is called immediatelly.
+   * running or are scheduled to run the handler is called immediately.
    *
    * @note The handler is called in the context of @ref cool::gcd::task::runner::cool_default()
    *   "global library runner".
