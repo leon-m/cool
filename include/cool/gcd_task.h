@@ -78,7 +78,7 @@ class runner_not_available : public cool::exception::runtime_exception
       : runtime_exception("the destination runner not available")
   { /* noop */ }
 };
-    
+
 /**
  * A class representing the queue of asynchronously executing tasks.
  *
@@ -197,7 +197,7 @@ class runner : public named
    * @param args A list of zero or more parameters to be passed to the Callable
    *             object when it starts executing.
    * @return cool::basis::aim object of the type instantitated with the type of
-   *     the return value of the Callable object, or void if there is no 
+   *     the return value of the Callable object, or void if there is no
    *     return value.
    * @exception cool::exception::illegal_state thrown if this runner was closed.
    *
@@ -245,10 +245,10 @@ class runner : public named
   {
     if (!m_active)
       throw cool::exception::illegal_state("this runner is closed");
-    
+
     vow<typename std::result_of<Function(Args...)>::type> v;
     auto a = v.get_aim();
-    
+
     void *ctx = static_cast<void*>(
             entrails::binder<
                 std::is_same<typename std::result_of<Function(Args...)>::type, void>::value
@@ -259,9 +259,9 @@ class runner : public named
               , std::forward<Function>(task)
               , std::forward<Args>(args)...)
     );
-    
+
     ::dispatch_async_f(m_data->m_queue, ctx, entrails::executor);
-    
+
     return a;
   }
 #endif
@@ -335,7 +335,7 @@ class runner : public named
    * @note This runner executes tasks sequentially.
    */
   dlldecl static std::shared_ptr<runner> cool_default_ptr();
-  
+
  private:
   friend class cool::gcd::async::timer;
   friend class cool::gcd::async::data_observer;
@@ -351,15 +351,15 @@ class runner : public named
   friend class group;
   operator const dispatch_queue_t() const { return m_data->m_queue; }
   operator dispatch_queue_t () { return m_data->m_queue; }
-  
+
   friend void entrails::kickstart(entrails::taskinfo*);
   void task_run(entrails::taskinfo* info_);
   friend void entrails::kickstart(entrails::taskinfo* info_, const std::exception_ptr& e_);
   void task_run(entrails::task_t* task_);
-  
+
  protected:
   dlldecl runner(const std::string& name, dispatch_queue_priority_t priority);
-  
+
  private:
   bool                             m_active;
   std::shared_ptr<entrails::queue> m_data;
@@ -413,7 +413,7 @@ class runner : public named
  *
  * <b>Portability and Limitations</b><br>
  * The task interface is available on Max OS/X using Xcode 7 or later,
- * Linux using gcc 5.0 or later, and Microsoft Windows using 
+ * Linux using gcc 5.0 or later, and Microsoft Windows using
  * Visual Studio 2013 or later.
  *
  * The following are limitations applicable to Microsft Windows:
@@ -440,7 +440,7 @@ template <typename Result> class task
   * Return value of this task
   */
   using result_type = Result;
-  
+
  public:
   task()                       = delete;
   task(const task&)            = delete;
@@ -461,7 +461,7 @@ template <typename Result> class task
     if (m_info != nullptr)
       entrails::cleanup_reverse(m_info);
   }
-  
+
   /**
    * Adds a new task to the sequence and returns it.
    *
@@ -606,9 +606,9 @@ template <typename Result> class task
     aux->m_u.subtask = new subtask_t(std::bind(
             entrails::subtask_binder<Result, subtask_result_t, Function
 #if !defined(INCORRECT_VARIADIC)
-		    , Args...
+          , Args...
 #endif
-		  >::rebind
+            >::rebind
           , aux
           , std::placeholders::_1
           , std::forward<Function>(func_)
@@ -616,13 +616,13 @@ template <typename Result> class task
           , std::forward<Args>(args_)...
 #endif
     ));
-     
+
     aux->m_deleter = std::bind(entrails::subtask_deleter<subtask_t>, aux->m_u.subtask);
     m_info = nullptr;     // invalidate state of current task
-    
+
     return task<subtask_result_t>(aux);
   }
-  
+
   /**
    * Specifies the error handling task for the current task.
    *
@@ -647,9 +647,9 @@ template <typename Result> class task
   {
     if (m_info == nullptr)
       throw cool::exception::illegal_state("this task object is in undefined state");
-  	return finally(m_info->m_runner, err_);
+    return finally(m_info->m_runner, err_);
   }
-  
+
   /**
    * Specifies the error handling task for the current task.
    *
@@ -662,26 +662,26 @@ template <typename Result> class task
    *    object.
    *
    * @note This method, if used, finalizes the task sequence. Althought it is
-   *   technically possible to use @ref then() on the task returned by this 
+   *   technically possible to use @ref then() on the task returned by this
    *   method, this and any subsequent tasks would never get run.
    */
   task finally(const std::weak_ptr<runner>& runner_, const error_handler_t& err_)
   {
     if (m_info == nullptr)
       throw cool::exception::illegal_state("this task object is in undefined state");
-  
+
     entrails::taskinfo* aux = new entrails::taskinfo(runner_);
     m_info->m_next = aux;
-  
+
     aux->m_eh = err_;
     aux->m_prev = m_info;
     m_info = aux;
 
     return task(std::move(*this));
   }
-  
+
   /**
-   * Submits a task, or a sequence of tasks into the @ref cool::gcd::task::runner "runner"'s 
+   * Submits a task, or a sequence of tasks into the @ref cool::gcd::task::runner "runner"'s
    * task queue(s) for execution.
    *
    * This method schedules the execution of the task, or the sequence of tasks
@@ -701,12 +701,12 @@ template <typename Result> class task
 
     auto ptr = m_info;
     m_info = nullptr;  // prevent double delete
-  
+
     for ( ; ptr->m_prev != nullptr; ptr = ptr->m_prev)
     ;
     entrails::kickstart(ptr);
   }
-  
+
  private:
   friend class factory;
 
@@ -738,7 +738,7 @@ template <typename Result> class task
   template <typename T> friend class task;
   task(entrails::taskinfo* info) : m_info(info)
   { /* noop */ }
-  
+
  private:
   entrails::taskinfo* m_info;
 };
@@ -757,7 +757,7 @@ template <> class task<void>
  public:
   using error_handler_t  = entrails::error_handler_t;
   using result_type      = void;
-  
+
  public:
   task()                       = delete;
   task(const task&)            = delete;
@@ -816,7 +816,7 @@ template <> class task<void>
     using subtask_result_t = typename std::result_of<Function(Args...)>::type;
 #endif
     using subtask_t = std::function<entrails::task_t*()>;
-    
+
     if (m_info == nullptr)
       throw cool::exception::illegal_state("this task object is in undefined state");
 
@@ -828,21 +828,21 @@ template <> class task<void>
     aux->m_u.subtask = new subtask_t(std::bind(
             entrails::subtask_binder<void, subtask_result_t, Function
 #if !defined(INCORRECT_VARIADIC)
-		, Args...
+          , Args...
 #endif
-			>::rebind
+            >::rebind
           , aux
           , std::forward<Function>(func_)
 #if !defined(INCORRECT_VARIADIC)
           , std::forward<Args>(args_)...
 #endif
     ));
-     
+
     aux->m_deleter = std::bind(entrails::subtask_deleter<subtask_t>, aux->m_u.subtask);
     m_info = nullptr;     // invalidate state of current task
-    
+
     return task<subtask_result_t>(aux);
-  
+
   }
 
 
@@ -860,13 +860,13 @@ template <> class task<void>
 
     entrails::taskinfo* aux = new entrails::taskinfo(runner_);
     m_info->m_next = aux;
-    
+
     aux->m_eh = err_;
     aux->m_prev = m_info;
-    
+
     return task(std::move(*this));
   }
-  
+
   void run()
   {
     if (m_info == nullptr)
@@ -874,12 +874,12 @@ template <> class task<void>
 
     auto ptr = m_info;
     m_info = nullptr;  // prevent double delete
-  
+
     for ( ; ptr->m_prev != nullptr; ptr = ptr->m_prev)
     ;
     entrails::kickstart(ptr);
   }
-  
+
  private:
   friend class factory;
 #if defined(INCORRECT_VARIADIC)
@@ -908,7 +908,7 @@ template <> class task<void>
   template <typename T> friend class task;
   task(entrails::taskinfo* info) : m_info(info)
   { /* noop */ }
-  
+
  private:
   entrails::taskinfo* m_info;
 };
@@ -929,7 +929,7 @@ class factory
    *
    * @param runner_ the @ref cool::gcd::task::runner "runner" to run the
    *    @c func_ Callable.
-   * @param func_ the user supplied Callable to be scheduled for execution 
+   * @param func_ the user supplied Callable to be scheduled for execution
    * @param args_ additional arguments to be passed to the user provided
    *    Callable when it begins the execution.
    *
@@ -970,7 +970,7 @@ class factory
  * considered clones and they represent the same group of tasks.
  *
  * <b>Thread Safety</b><br>
- * The group objects are mostly, but not entirely thread safe. In particular, 
+ * The group objects are mostly, but not entirely thread safe. In particular,
  * it may happen that wait() returns prematurely if called from one thread
  * while another thread is adding tasks to the group. This limitiation extends
  * to the clones of the group object.
@@ -979,17 +979,17 @@ class group
 {
   group(group&& other) = delete;
   group& operator=(group&& other) = delete;
-  
+
  public:
  /**
   * Application handler type for completion callback.
   *
-  * The handler called when all asynchronous tasks in the group complete 
+  * The handler called when all asynchronous tasks in the group complete
   * execution must be a Callable that can be assigned to
   * <tt>std::function<void(void)></tt> function type.
   */
   typedef entrails::task_t handler_t;
-  
+
  public:
  /**
   * Construct a new group object.
@@ -1022,7 +1022,7 @@ class group
   *   last task completes.
   */
   dlldecl ~group();
-  
+
   /**
    * Accept the task for asynchronous execution as a part of the group.
    *
@@ -1043,7 +1043,7 @@ class group
   void run(const runner& runner, Function&& task)
   {
     void* ctx = new entrails::task_t(task);
-    
+
     ::dispatch_group_async_f(m_group, runner, ctx, entrails::executor);
   }
 #else
@@ -1053,7 +1053,7 @@ class group
     std::function<typename std::result_of<Function(Args...)>::type(Args...)> aux = task;
     void* ctx = new entrails::task_t(
           bind(aux, std::forward<Args>(args)...));
-    
+
     ::dispatch_group_async_f(m_group, runner, ctx, entrails::executor);
   }
 #endif
@@ -1063,7 +1063,7 @@ class group
    * @param handler Handler to be called when task execution completes.
    *
    * Sets the application defined handler to be called when all asynchronous
-   * tasks currently in the group complete the execution. If no tasks are 
+   * tasks currently in the group complete the execution. If no tasks are
    * running or are scheduled to run the handler is called immediatelly.
    *
    * @note The handler is called in the context of @ref cool::gcd::task::runner::cool_default()
@@ -1074,7 +1074,7 @@ class group
    *  in calling all handlers after the last task completes.
    */
   dlldecl void then(const handler_t& handler);
-  
+
   /**
    * Wait for the tasks to complete.
    *
@@ -1094,7 +1094,7 @@ class group
   {
     wait(std::chrono::duration_cast<std::chrono::nanoseconds>(interval).count());
   }
-  
+
   /**
    * Wait for the tasks to complete.
    *
@@ -1115,10 +1115,10 @@ class group
     int64_t w = std::chrono::duration_cast<std::chrono::nanoseconds>(when - Clock::now()).count();
     if (w < 0)
       throw cool::exception::timeout("Timeout while waiting for tasks to complete");
-    
+
     wait(w);
   }
-  
+
   /**
    * Wait for the tasks to complete.
    *
@@ -1134,7 +1134,7 @@ class group
    *   specify the completion handler for a group of tasks.
    */
   dlldecl void wait(int64_t interval);
-  
+
   /**
    * Wait for the tasks to complete.
    *
@@ -1144,11 +1144,11 @@ class group
    *   specify the completion handler for a group of tasks.
    */
   dlldecl void wait();
-  
+
  private:
   static void executor(void* ctx);
   static void finalizer(void* ctx);
-  
+
  private:
   dispatch_group_t m_group;
 };

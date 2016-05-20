@@ -71,48 +71,48 @@ class source_data_base
   }
 
  public:
- 
+
   static Handler& handler(void* ctx)
   {
     return static_cast<this_t*>(ctx)->m_cb;
   }
-  
+
   static dispatch_source_t& source(void* ctx)
   {
     return static_cast<this_t*>(ctx)->m_source;
   }
-  
+
   dispatch_source_t& source()                 { return m_source; }
   const dispatch_source_t& source() const     { return m_source; }
   std::atomic_bool& suspended()               { return m_suspended; }
   const std::atomic_bool& suspended() const   { return m_suspended; }
-  
+
  private:
   dispatch_source_t m_source;
   std::atomic_bool  m_suspended;
   Handler           m_cb;
 };
- 
+
 template <typename Handler, typename Data>
 struct source_data : public source_data_base<Handler>
 {
   typedef source_data<Handler, Data> this_t;
   typedef source_data_base<Handler> base_t;
-  
+
  public:
   source_data(dispatch_source_t ds, const Handler& cb)
       : base_t(ds, cb)
   { /* noop */ }
-  
+
   static Data& data(void* ctx)
   {
     return static_cast<this_t*>(ctx)->m_data;
   }
-  
+
   Data& data()             { return m_data; }
   const Data& data() const { return m_data; }
   void data(const Data& d) { m_data = d; }
-  
+
  private:
   Data m_data;
 };
@@ -122,7 +122,7 @@ template <typename Handler>
 struct source_data<Handler, void> : public source_data_base<Handler>
 {
   typedef source_data_base<Handler> base_t;
-  
+
  public:
   source_data(dispatch_source_t ds, const Handler& cb)
       : base_t(ds, cb)
@@ -135,18 +135,18 @@ class async_source_ref_base
 {
  protected:
   typedef struct source_data<Handler, Data> source_data_t;
-  
+
   async_source_ref_base(const async_source_ref_base&)            = delete;
   async_source_ref_base& operator=(const async_source_ref_base&) = delete;
   async_source_ref_base(async_source_ref_base&&)                 = delete;
   async_source_ref_base& operator=(async_source_ref_base&&)      = delete;
   async_source_ref_base()                                        = delete;
-  
+
   async_source_ref_base(const dispatch_source_t& src, const Handler& cb)
   {
     if (src == NULL)
       throw exception::create_failure("failed to create asynchronous event source");
-    
+
     m_source = new source_data_t(src, cb);
     ::dispatch_set_context(src, m_source);
     ::dispatch_source_set_cancel_handler_f(src, cancel_cb);
@@ -155,16 +155,16 @@ class async_source_ref_base
   {
     if (m_source->suspended())
       ::dispatch_resume(m_source->source());
-    
+
     ::dispatch_source_cancel(m_source->source());
   }
-  
+
  private:
   static void cancel_cb(void* ctx)
   {
     delete static_cast<source_data_t*>(ctx);
   }
-  
+
  public:
   const dispatch_source_t& source() const { return m_source->source(); }
   dispatch_source_t& source()             { return m_source->source(); }
@@ -175,14 +175,14 @@ class async_source_ref_base
     if (m_source->suspended().compare_exchange_strong(expected, false))
       ::dispatch_resume(m_source->source());
   }
-  
+
   void suspend()
   {
     bool expected = false;
     if (m_source->suspended().compare_exchange_strong(expected, true))
       ::dispatch_suspend(m_source->source());
   }
-  
+
  protected:
   source_data_t* m_source;
 };
@@ -191,7 +191,7 @@ template <typename Handler, typename Data>
 class async_source_ref : public async_source_ref_base<Handler, Data>
 {
   typedef async_source_ref_base<Handler, Data> base_t;
-  
+
  public:
   async_source_ref(const dispatch_source_t& src, const Handler& cb)
       : base_t(src, cb)
@@ -206,7 +206,7 @@ template <typename Handler>
 class async_source_ref<Handler, void> : public async_source_ref_base<Handler, void>
 {
   typedef async_source_ref_base<Handler, void> base_t;
-  
+
  public:
   async_source_ref(const dispatch_source_t& src, const Handler& cb)
       : base_t(src, cb)
@@ -218,28 +218,28 @@ template <typename Handler, typename Data>
 class async_source
 {
   typedef async_source_ref<Handler, Data> source_data_t;
-  
+
  protected:
   async_source(const dispatch_source_t& source, const Handler& cb)
     : m_source(std::make_shared<async_source_ref<Handler, Data>>(source, cb))
   { /* noop */ }
-  
+
   const dispatch_source_t& source() const { return m_source->source(); }
   dispatch_source_t& source()             { return m_source->source(); }
-  
+
   void resume()
   {
     m_source->resume();
   }
-  
+
   void suspend()
   {
     m_source->suspend();
   }
-  
+
   source_data_t& context_data()             { return *m_source; }
   const source_data_t& context_data() const { return *m_source; }
-  
+
  private:
   std::shared_ptr<source_data_t> m_source;
 };
@@ -250,10 +250,10 @@ class fd_io : public async_source<std::function<void(int, std::size_t)>, conditi
 {
  protected:
   typedef std::function<void(int, std::size_t)> handler_t;
-  
+
  protected:
   typedef entrails::source_data<handler_t, conditionally_owned> context_t;
-  
+
  protected:
   fd_io(dispatch_source_type_t type,
         int fd,
@@ -262,7 +262,7 @@ class fd_io : public async_source<std::function<void(int, std::size_t)>, conditi
         bool owner);
   ~fd_io();
   int fd() const { return context_data().data().fd; }
-  
+
  private:
   static void cancel_cb(void* ctx);
   static void event_cb(void* ctx);
@@ -275,7 +275,7 @@ class async_writer : public fd_io
   async_writer(int fd, const handler_t& cb, const dispatch_queue_t& run, bool owner)
       : fd_io(DISPATCH_SOURCE_TYPE_WRITE, fd, cb, run, owner)
   { /* noop */ }
-  
+
   void start() { resume(); }
   void stop() { suspend(); }
   int fd() const { return fd_io::fd(); }

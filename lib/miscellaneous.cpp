@@ -29,7 +29,7 @@
 
 namespace cool { namespace basis
 {
-  
+
 
 std::atomic<unsigned long> identified::m_counter(0);
 
@@ -52,7 +52,7 @@ named::named(const std::string& prefix)
 {
   std::stringstream ss;
   ss << prefix << "-" << id();
-    
+
   m_name = ss.str();
 }
 

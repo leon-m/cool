@@ -31,7 +31,7 @@ class test_vow : public CppUnit::TestFixture
   CPPUNIT_TEST(test_one);
   CPPUNIT_TEST(test_two);
   CPPUNIT_TEST_SUITE_END();
-  
+
 public:
   void test_one();
   void test_two();
@@ -164,7 +164,7 @@ void test_vow::test_two()
     bool tmo = false;
     bool oth = false;
     int res = 0;
-    
+
     std::thread t1(
       [&] ()
       {
@@ -189,13 +189,13 @@ void test_vow::test_two()
         catch (const cool::exception::timeout&) { tmo = true; }
         catch (...) { oth = true; }
       });
-    
+
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     v.set(42);
     t1.join();
     t2.join();
     t3.join();
-    
+
     CPPUNIT_ASSERT_EQUAL(42, res);
     CPPUNIT_ASSERT(!tmo);
     CPPUNIT_ASSERT(ill);
@@ -208,7 +208,7 @@ void test_vow::test_two()
     bool ill = false;
     bool tmo = false;
     bool oth = false;
-    
+
     std::thread t1(
       [&] ()
       {
@@ -233,13 +233,13 @@ void test_vow::test_two()
         catch (const cool::exception::timeout&) { tmo = true; }
         catch (...) { oth = true; }
       });
-    
+
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     v.set();
     t1.join();
     t2.join();
     t3.join();
-    
+
     CPPUNIT_ASSERT(!tmo);
     CPPUNIT_ASSERT(ill);
   }

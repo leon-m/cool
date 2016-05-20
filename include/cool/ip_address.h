@@ -124,7 +124,7 @@ class address
    * @note In general, two addresses that differ in kind() or version() do
    *   not comapre equal. However, the @ref cool::net::ipv6::host "IPv6 host" addresses
    *   that represent the @ref ipv4::host "IPv4 host" addresses mapped into
-   *   @ref cool::net::ip::IPv6 "IPv6" address space with either 
+   *   @ref cool::net::ip::IPv6 "IPv6" address space with either
    *   @ref ipv6::rfc_ipv4map or @ref ipv6::rfc_ipv4translate network prefix
    *   will compare equal to the corresponding @ref cool::net::ip::IPv4 "IPv4" addresses.
    *
@@ -177,7 +177,7 @@ class address
   /**
    * Type conversion operator.
    *
-   * @return Pointer to internal array of bytes containing binary 
+   * @return Pointer to internal array of bytes containing binary
    *   representation of an IP address. The array is size() bytes long.
    */
   virtual operator const uint8_t * () const = 0;
@@ -195,7 +195,7 @@ class address
    *  this address object.
    *
    * @exception exception::bad_conversion if this address object is not
-   *   IPv4 address or is not IPv6 host address mapped or translated from 
+   *   IPv4 address or is not IPv6 host address mapped or translated from
    *   the IPv4 address.
    *
    * @note The IPv6 host addresses that are IPv4 mapped or translated host
@@ -255,7 +255,7 @@ class address
   /**
    * Assignment operator.
    *
-   * Assigns the IP address contained in <tt>struct in_addr</tt> to this 
+   * Assigns the IP address contained in <tt>struct in_addr</tt> to this
    * address object.  If this address object is an IPv6 host address, the
    * supplied IPv4 address is mapped into IPv6 address using the
    * @ref ipv6::rfc_ipv4map "standard network prefix" for IPv4 mapped addresses.
@@ -314,7 +314,7 @@ class address
    * @param attr Attribute to check.
    */
   virtual bool is(Attribute attr) const = 0;
-  
+
  protected:
   virtual void assign(const address&) = 0;
 };
@@ -431,10 +431,10 @@ enum Style {
    */
   DottedQuad
 };
-  
-  
+
+
 typedef cool::basis::binary<16> binary_t;
-  
+
 /**
  * IPv6 host address implementation class.
  */
@@ -520,7 +520,7 @@ class host : public ip::host
   virtual ip::address& operator =(const std::string&) override;
   virtual bool in(const ip::network& net) const override;
   virtual bool is(ip::Attribute) const override;
-  
+
   // ipv6::host specific
   /**
    * Translate the IPv6 address into textual format.
@@ -537,7 +537,7 @@ class host : public ip::host
 
  private:
   void assign(const ip::address& other) override;
-  
+
  private:
   binary_t m_data;
 };
@@ -725,7 +725,7 @@ typedef cool::basis::binary<4> binary_t;
  * Implementation class for IPv4 addresses.
  *
  */
- 
+
 /**
  * IPv4 host address implementation class.
  */
@@ -803,7 +803,7 @@ class host : public ip::host
   explicit host(const ip::address& data);
 
   explicit host(uint32_t addr);
-  
+
   // address interface
   virtual bool equals(const ip::address& other) const override;
   virtual void visualize(std::ostream& os) const override;
@@ -903,7 +903,7 @@ class network : public ip::network
   virtual bool equals(const ip::address& other) const override;
   virtual void visualize(std::ostream &os) const override;
   virtual ip::Kind kind() const override { return ip::NetworkAddress; }
-  virtual ip::Version version() const override { return ip::IPv4;  }
+  virtual ip::Version version() const override { return ip::IPv4; }
   virtual operator const uint8_t * () const override { return m_data; }
   virtual operator uint8_t * () override { return m_data; }
   virtual operator struct in_addr() const override;
@@ -958,7 +958,7 @@ extern const network rfc_private_20;
 /**
  * Reserved IPv4 address range 192.168.0.0/16.
  *
- * 16-bit block private network (formerly 256 class C private networks) 
+ * 16-bit block private network (formerly 256 class C private networks)
  * as specified by RFC 1918.
  */
 extern const network rfc_private_16;
@@ -1089,7 +1089,7 @@ inline bool operator !=(const cool::net::ip::address& lhs, const cool::net::ip::
  * @ingroup net-global
  * Display IP address to the character stream.
  *
- * Generates a textual presentation of the IP address to the output stream. 
+ * Generates a textual presentation of the IP address to the output stream.
  *
  * @see @ref cool::net::ip::address::visualize() "address::visualize()" for more details.
  */

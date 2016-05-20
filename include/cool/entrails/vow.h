@@ -34,40 +34,40 @@ class state_base
 {
  protected:
   enum States { EMPTY, FAILURE, SUCCESS, DEPLETED };
-  
+
  public:
   typedef state_base              this_t;
   typedef std::shared_ptr<this_t> ptr_t;
 
  public:
   typedef std::function<void (const std::exception_ptr&)> failure_cb_t;
- 
+
   state_base(const state_base&)             = delete;
   state_base(state_base&&)                  = delete;
   state_base& operator= (const state_base&) = delete;
   state_base& operator= (state_base&&)      = delete;
-  
+
   std::mutex& mutex();
   const std::mutex& mutex() const;
   std::condition_variable& cv();
   const std::condition_variable& cv() const;
-  
+
   failure_cb_t& on_failure();
   const failure_cb_t& on_failure() const;
   void on_failure(const failure_cb_t&);
   const std::exception_ptr& failure();
   dlldecl void failure(const std::exception_ptr& err);
-  
+
   bool is_set() const;
   bool is_success() const;
   bool is_failure() const;
   bool is_empty() const;
   bool is_depleted() const;
-  
+
   void deplete();
   int dec_vow_ref_cnt();
   void inc_vow_ref_cnt();
-  
+
  protected:
   state_base();
 
@@ -88,11 +88,11 @@ template <typename T> class state : public state_base
   typedef std::shared_ptr<this_t>                         ptr_t;
   typedef std::function<void (const T&)>                  success_cb_t;
   typedef std::function<void (const vow<T> &, const T&)>  chained_cb_t;
-  
+
  public:
   state();
   ~state();
-  
+
   success_cb_t& on_success();
   const success_cb_t& on_success() const;
   void on_success(const success_cb_t&);
@@ -112,17 +112,17 @@ template <> class state<void> : public state_base
   typedef std::shared_ptr<this_t>                 ptr_t;
   typedef std::function<void (void)>              success_cb_t;
   typedef std::function<void (const vow<void> &)> chained_cb_t;
-  
+
  public:
   state();
   ~state();
-  
+
   success_cb_t& on_success();
   const success_cb_t& on_success() const;
   void on_success(const success_cb_t&);
   void get_result();
   void set_result();
-  
+
  private:
   success_cb_t m_success_cb;
 };

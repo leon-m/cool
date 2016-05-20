@@ -36,10 +36,10 @@ namespace cool { namespace gcd { namespace task {
 #define DISPATCH_QUEUE_PRIORITY_DEFAULT     0
 #define DISPATCH_QUEUE_PRIORITY_LOW         (-2)
 #define DISPATCH_QUEUE_PRIORITY_BACKGROUND  INT16_MIN
-  
+
 typedef long dispatch_queue_priority_t;
 #endif
-  
+
 #if defined(WIN32_TARGET)
 typedef long dispatch_queue_priority_t;
 #endif
@@ -78,7 +78,7 @@ struct taskinfo
     m_u.task = t;
   }
   dlldecl ~taskinfo();
-  
+
   union {
     task_t* task;
     void*   subtask;
@@ -93,7 +93,7 @@ struct taskinfo
 // --- cleanup stuff
 dlldecl void cleanup(taskinfo* info_);
 dlldecl void cleanup_reverse(taskinfo* info_);
-  
+
 // deleter for subtasks
 template<typename T> void subtask_deleter(void* address)
 {
@@ -141,7 +141,7 @@ template <typename ResultT> class task_entry
         kickstart(next, std::current_exception());
       cleanup(next);
     }
-    
+
     delete info_;
   }
 };
@@ -172,7 +172,7 @@ template<> class task_entry<void>
         kickstart(next, std::current_exception());
       cleanup(next);
     }
-    
+
     delete info_;
   }
 };
@@ -389,17 +389,17 @@ struct queue
     : m_queue(q)
     , m_is_system(is_sys)
   { m_suspended = false;/* noop */ }
-  
+
   ~queue()
   {
     if (!m_is_system)
       ::dispatch_release(m_queue);
   }
-  
+
   dispatch_queue_t m_queue;
   std::atomic_bool m_suspended;
   const bool m_is_system;
-  
+
 };
 
 } // namespace

@@ -60,7 +60,7 @@ class identified
    * @return Numerical identification.
    */
   dlldecl unsigned long id() const { return m_number; }
-  
+
  protected:
  /**
   * Move constructor.
@@ -102,7 +102,7 @@ class identified
    */
   dlldecl identified() : m_number(++m_counter)
   { /* noop */ }
-  
+
  private:
   unsigned long m_number;
   static std::atomic<unsigned long> m_counter;
@@ -149,7 +149,7 @@ class named : public identified
    * Set the name for this object
    */
   dlldecl void name(const std::string& name) { m_name = name; }
-  
+
  protected:
  /**
   * Create a new @ref named object.
@@ -196,7 +196,7 @@ class named : public identified
    * @return A clone of the original object.
    */
   dlldecl named& operator =(named&&);
-  
+
  private:
   std::string m_name;
   std::string m_prefix;

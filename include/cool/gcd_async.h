@@ -86,7 +86,7 @@ class reader : public entrails::fd_io
   * number of bytes may differ when actually read.
   */
   typedef entrails::fd_io::handler_t handler_t;
-  
+
  public:
   /**
    * Constructs a new instance of the asynchronous reader.
@@ -106,7 +106,7 @@ class reader : public entrails::fd_io
   reader(int fd, const task::runner& run, const handler_t& cb, bool owner = true)
       : entrails::fd_io(DISPATCH_SOURCE_TYPE_READ, fd, cb, run, owner)
   { /* noop */ }
-  
+
   /**
    * Start the asynchronous reader.
    *
@@ -168,7 +168,7 @@ class writer
    * upon error the current write request is cancelled.
    */
   typedef std::function<void(int)> err_handler_t;
-  
+
  public:
   /**
    * Constructs a new instance of the asynchronous writer.
@@ -191,7 +191,7 @@ class writer
          const handler_t& cb = handler_t(),
          const err_handler_t& ecb = err_handler_t(),
          bool owner = true);
-         
+
   /**
    * Request write.
    *
@@ -209,7 +209,7 @@ class writer
    *   exception.
    */
   void write(const void*  data, std::size_t size);
-  
+
   /**
    * Return true if write operation in progress.
    *
@@ -217,11 +217,11 @@ class writer
    * another write request would throw.
    */
   bool is_busy() const { return m_busy; }
-  
+
  private:
   void write_cb(int fd, std::size_t size);
   void set_idle();
-  
+
  private:
   entrails::async_writer m_writer;
   std::size_t            m_size;
@@ -231,13 +231,13 @@ class writer
   handler_t              m_cb;
   err_handler_t          m_err_cb;
   std::atomic_bool       m_busy;
-  
+
 };
 #endif
 /**
  * Asynchronous reader and writer.
  *
- * This class is a composition of cool::gcd::async::reader and 
+ * This class is a composition of cool::gcd::async::reader and
  * cool::gcd::async::writer classes.
  *
  * @note Upon creation the reader part of the asynchronous reader/writer is
@@ -281,7 +281,7 @@ class reader_writer
                 const writer::handler_t& wr_cb = writer::handler_t(),
                 const writer::err_handler_t& err_cb = writer::err_handler_t(),
                 bool owner = true);
-  
+
   /**
    * Request write.
    *
@@ -378,7 +378,7 @@ class signal : public entrails::async_source<std::function<void(int, int)>, int>
 {
  public:
   /**
-   * The user signal handler type. 
+   * The user signal handler type.
    *
    * The user signal handler must be Callable that can be assigned to this
    * function type. When called, the handler receives the following parameters:
@@ -393,7 +393,7 @@ class signal : public entrails::async_source<std::function<void(int, int)>, int>
 
  private:
   typedef entrails::source_data<handler_t, int> context_t;
-  
+
  public:
   /**
    * Create a signal object for the specified software signal number.
@@ -426,7 +426,7 @@ class signal : public entrails::async_source<std::function<void(int, int)>, int>
    * This call will restart the signal delivery after it was stopped by a call
    * to stop().
    */
-  void start() { resume();  }
+  void start() { resume(); }
   /**
    * Stop delivering the signal.
    *
@@ -436,7 +436,7 @@ class signal : public entrails::async_source<std::function<void(int, int)>, int>
    * Use start() to restart the signal delivery.
    */
   void stop()  { suspend(); }
-  
+
  private:
   static void signal_handler(void* ctx);
 };
@@ -494,10 +494,10 @@ class timer : public basis::named,
    * @warning The user callback must not throw.
    */
   typedef std::function<void(unsigned long count)> handler_t;
-  
+
 private:
   typedef entrails::source_data<handler_t, void> context_t;
-  
+
  public:
   /**
    * Create a timer object.
@@ -555,7 +555,7 @@ private:
   {
     set_period(period, std::chrono::duration<Rep, Period>::zero());
   }
-  
+
   /**
    * Create a timer object.
    *
@@ -586,7 +586,7 @@ private:
   {
     set_period(period, leeway);
   }
-  
+
   /**
    * Create a timer object.
    *
@@ -637,7 +637,7 @@ private:
   dlldecl timer(const handler_t& handler, const task::runner& runner)
       : timer("timer", handler, runner)
   { /* noop */ }
-  
+
   /**
    * Create a timer object.
    *
@@ -685,7 +685,7 @@ private:
   {
     _set_period(period, leeway);
   }
- 
+
   /**
    * Create a timer object.
    *
@@ -718,7 +718,7 @@ private:
   {
     _set_period(period, leeway);
   }
-  
+
   /**
    * Set or change the period of the timer.
    *
@@ -739,7 +739,7 @@ private:
   {
     _set_period(std::chrono::duration_cast<std::chrono::nanoseconds>(period).count(), 0);
   }
-  
+
   /**
    * Set or change the period of the timer.
    *
@@ -760,7 +760,7 @@ private:
     _set_period(std::chrono::duration_cast<std::chrono::nanoseconds>(period).count(),
                 std::chrono::duration_cast<std::chrono::nanoseconds>(leeway).count());
   }
-  
+
   /**
    * Set or change the period of the timer.
    *
@@ -781,7 +781,7 @@ private:
   {
     _set_period(period, leeway);
   }
-  
+
   /**
    * Start or restart the timer.
    *
@@ -793,7 +793,7 @@ private:
    * @note start() is required after the period of the timer is changed.
    */
   dlldecl void start();
-  
+
   /**
    * Suspend the timer.
    *
@@ -802,12 +802,12 @@ private:
    * user callback.
    */
   dlldecl void suspend() { async_source::suspend(); }
-  
+
   /**
    * Resume the timer.
    *
    * Resumes the timer by enabling the calls to the user callback. Since
-   * the timer was running even when disabled, the first time the timer will 
+   * the timer was running even when disabled, the first time the timer will
    * call the user callback is at the next period as measured internally by
    * the timer.
    */
@@ -815,11 +815,11 @@ private:
   {
     async_source::resume();
   }
-  
+
  private:
   static void timer_handler(void* ctx);
   dlldecl void _set_period(uint64_t period, uint64_t leeway);
-  
+
  private:
   uint64_t  m_period;
   uint64_t  m_leeway;
@@ -862,9 +862,9 @@ private:
 class fs_observer : public entrails::async_source<std::function<void(unsigned long)>, int>
 {
  public:
-  /** 
+  /**
    * User handler type.
-   * 
+   *
    * The user handler must be a Callable that can be assigned to the function
    * object of this type.
    *
@@ -895,10 +895,10 @@ class fs_observer : public entrails::async_source<std::function<void(unsigned lo
     //! The observed file system object was revoked.
     Revoke    = DISPATCH_VNODE_REVOKE
   };
-  
+
  private:
   typedef entrails::source_data<handler_t, int> context_t;
-  
+
  public:
   /**
    * Create fs_observer object.
@@ -925,11 +925,11 @@ class fs_observer : public entrails::async_source<std::function<void(unsigned lo
   /**
    * Start delivering the events.
    *
-   * This call will start, or restart the event delivery after creation or if 
+   * This call will start, or restart the event delivery after creation or if
    * it was stopped by a call to stop().
    */
   void start() { resume();  }
-  
+
   /**
    * Stop delivering the events.
    *
@@ -975,9 +975,9 @@ class fs_observer : public entrails::async_source<std::function<void(unsigned lo
 class data_observer : public entrails::async_source<std::function<void(unsigned long)>, void>
 {
  public:
-  /** 
+  /**
    * User handler type.
-   * 
+   *
    * The user handler must be a Callable that can be assigned to the function
    * object of this type.
    *
@@ -994,10 +994,10 @@ class data_observer : public entrails::async_source<std::function<void(unsigned 
     Add,         //!< Values are added together ignoring the mask
     BitwiseOr    //!< Mask is applied to each value; results are merged using bitwise OR
   };
-  
+
  private:
   typedef entrails::source_data<handler_t, void> context_t;
-  
+
  public:
   /**
    * Create data_observer object.
@@ -1019,11 +1019,11 @@ class data_observer : public entrails::async_source<std::function<void(unsigned 
                 const task::runner& runner = gcd::task::runner::cool_default(),
                 CoalesceStrategy strategy = BitwiseOr,
                 unsigned long mask = 0);
-  
+
   /**
    * Start delivering the events.
    *
-   * This call will start, or restart the event delivery after creation or if 
+   * This call will start, or restart the event delivery after creation or if
    * it was stopped by a call to stop().
    */
   dlldecl void start() { resume(); }
@@ -1043,7 +1043,7 @@ class data_observer : public entrails::async_source<std::function<void(unsigned 
    *   handler will not be called.
    */
   dlldecl void send(unsigned long value);
-  
+
  private:
   static void handler(void* ctx);
 };
@@ -1079,9 +1079,9 @@ class data_observer : public entrails::async_source<std::function<void(unsigned 
 class proc_observer : public entrails::async_source<std::function<void(unsigned long)>, void>
 {
  public:
-  /** 
+  /**
    * User handler type.
-   * 
+   *
    * The user handler must be a Callable that can be assigned to the function
    * object of this type.
    *
@@ -1090,15 +1090,15 @@ class proc_observer : public entrails::async_source<std::function<void(unsigned 
    * @note The value is reset to 0 after the call to the user handler.
    */
   typedef std::function<void(unsigned long)> handler_t;
-  
+
   static const uint64_t EXIT = DISPATCH_PROC_EXIT;
   static const uint64_t EXEC = DISPATCH_PROC_EXEC;
   static const uint64_t FORK = DISPATCH_PROC_FORK;
   static const uint64_t SIGNAL = DISPATCH_PROC_SIGNAL;
-  
+
  private:
   typedef entrails::source_data<handler_t, void> context_t;
-  
+
  public:
   /**
    * Create proc_observer object.
@@ -1122,11 +1122,11 @@ class proc_observer : public entrails::async_source<std::function<void(unsigned 
                 pid_t pid,
                 const task::runner& runner = gcd::task::runner::cool_default(),
                 unsigned long mask = EXIT);
-  
+
   /**
    * Start delivering the events.
    *
-   * This call will start, or restart the event delivery after creation or if 
+   * This call will start, or restart the event delivery after creation or if
    * it was stopped by a call to stop().
    */
   void start() { resume();  }
@@ -1137,7 +1137,7 @@ class proc_observer : public entrails::async_source<std::function<void(unsigned 
    * be coalesced until the observer object is started again.
    */
   void stop()  { suspend(); }
-  
+
  private:
   static void handler(void* ctx);
 };

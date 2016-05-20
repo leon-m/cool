@@ -68,7 +68,7 @@ template <std::size_t Size> class binary
     ::memset(m_data, 0, Size);
     std::size_t limit = args.size() < Size ? args.size() : Size;
     std::size_t index = 0;
-    
+
     for (auto iter = args.begin(); index < limit ; ++iter)
       m_data[index++] = *iter;
   }
@@ -339,7 +339,7 @@ template <std::size_t Size> class binary
   {
     return Size;
   }
-  
+
  private:
   uint8_t m_data[Size];
 };

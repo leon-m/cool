@@ -40,19 +40,19 @@ cool::basis::aim<int> r00001()
 }
 /*
                                by-value   by-const-lvalue-ref  by-lvalue ref   by-rvalue-ref
- 
+
    literal                      Yes        Yes                  No              Yes
- 
+
    func-cal                     Yes        Yes                  No              Yes
- 
+
    static-const                 Yes        Yes                  No              No
- 
+
    const                        Yes        Yes                  No              No
 
    lvalue-ref                   Yes        Yes                  Yes             No
- 
+
    const-lvalue-ref             Yes        Yes                  No              No
- 
+
    local variable               Yes        Yes                  Yes             Yes
 */
 
@@ -245,87 +245,87 @@ void t00002a()
 
 void t00002b()
 {
-	cool::gcd::task::factory::create(
- 		    test_runner
-	   	, []() { std::cout << "00002b - first lambda received: " << 42 << "a\n"; return 42; }
-	  ).then(
-	      [](const std::exception_ptr& e) {}
+  cool::gcd::task::factory::create(
+        test_runner
+      , []() { std::cout << "00002b - first lambda received: " << 42 << "a\n"; return 42; }
+    ).then(
+        [](const std::exception_ptr& e) {}
       , [](int n) { std::cout << "00002b - second lambda, got " << n << "\n"; }
-	  ).then(
- 	      [](const std::exception_ptr& e) {}
-	    , []() { std::cout << "00002b - third lambda\n"; throw 42; }
+    ).then(
+        [](const std::exception_ptr& e) {}
+      , []() { std::cout << "00002b - third lambda\n"; throw 42; }
     ).finally(
-  	    [](const std::exception_ptr& e) { std::cout << "0002b - exception\n"; }
-	).run();
+        [](const std::exception_ptr& e) { std::cout << "0002b - exception\n"; }
+  ).run();
 }
 
 
 // non-void sub-tasks on a non-void task
 void t00002c()
 {
-	cool::gcd::task::factory::create(
- 		    test_runner
-	   	, []() -> double { std::cout << "00002c - first lambda received: " << 42 << "a\n"; return 42;}
-	  ).then(
-	      [](const std::exception_ptr& e) {}
+  cool::gcd::task::factory::create(
+        test_runner
+      , []() -> double { std::cout << "00002c - first lambda received: " << 42 << "a\n"; return 42;}
+    ).then(
+        [](const std::exception_ptr& e) {}
       , [](double n) -> int { std::cout << "00002c - second lambda, got " << 0 << "\n"; return 42;}
-	  ).then(
- 	      [](const std::exception_ptr& e) {}
-	    , [](int n) -> int { std::cout << "00002c - third lambda, got " << n << "\n"; throw 42; }
+    ).then(
+        [](const std::exception_ptr& e) {}
+      , [](int n) -> int { std::cout << "00002c - third lambda, got " << n << "\n"; throw 42; }
     ).finally(
-  	    [](const std::exception_ptr& e) { std::cout << "0002c - exception\n"; }
-	).run();
+        [](const std::exception_ptr& e) { std::cout << "0002c - exception\n"; }
+  ).run();
 }
 
 // void subtask (last then) on a non-void task
 void t00002d()
 {
-	cool::gcd::task::factory::create(
- 		    test_runner
-	   	, []() -> double { std::cout << "00002d - first lambda received: " << 42 << "a\n"; return 42;}
-	  ).then(
-	      [](const std::exception_ptr& e) {}
+  cool::gcd::task::factory::create(
+        test_runner
+      , []() -> double { std::cout << "00002d - first lambda received: " << 42 << "a\n"; return 42;}
+    ).then(
+        [](const std::exception_ptr& e) {}
       , [](double n) -> int { std::cout << "00002d - second lambda, got " << 0 << "\n"; return 42;}
-	  ).then(
- 	      [](const std::exception_ptr& e) {}
-	    , [](int n) -> void { std::cout << "00002d - third lambda, got " << n << "\n"; throw 42; }
+    ).then(
+        [](const std::exception_ptr& e) {}
+      , [](int n) -> void { std::cout << "00002d - third lambda, got " << n << "\n"; throw 42; }
     ).finally(
-  	    [](const std::exception_ptr& e) { std::cout << "0002d - exception\n"; }
-	).run();
+        [](const std::exception_ptr& e) { std::cout << "0002d - exception\n"; }
+  ).run();
 }
 
 // non-void subtask on a void base task
 void t00002e()
 {
-	cool::gcd::task::factory::create(
- 		    test_runner
-	   	, []() -> void { std::cout << "00002e - first lambda received: " << 42 << "a\n"; }
-	  ).then(
-	      [](const std::exception_ptr& e) {}
+  cool::gcd::task::factory::create(
+        test_runner
+      , []() -> void { std::cout << "00002e - first lambda received: " << 42 << "a\n"; }
+    ).then(
+        [](const std::exception_ptr& e) {}
       , []() -> int { std::cout << "00002e - second lambda, got " << 0 << "\n"; return 42;}
-	  ).then(
- 	      [](const std::exception_ptr& e) {}
-	    , [](int n) -> void { std::cout << "00002e - third lambda, got " << n << "\n"; throw 42; }
+    ).then(
+        [](const std::exception_ptr& e) {}
+      , [](int n) -> void { std::cout << "00002e - third lambda, got " << n << "\n"; throw 42; }
     ).finally(
-  	    [](const std::exception_ptr& e) { std::cout << "0002e - exception\n"; }
-	).run();
+        [](const std::exception_ptr& e) { std::cout << "0002e - exception\n"; }
+  ).run();
 }
 
 // void subtask on a void base task
 void t00002f()
 {
-	cool::gcd::task::factory::create(
- 		    test_runner
-	   	, []() -> void { std::cout << "00002f - first lambda received: " << 42 << "a\n"; }
-	  ).then(
-	      [](const std::exception_ptr& e) {}
+  cool::gcd::task::factory::create(
+        test_runner
+      , []() -> void { std::cout << "00002f - first lambda received: " << 42 << "a\n"; }
+    ).then(
+        [](const std::exception_ptr& e) {}
       , []() -> void { std::cout << "00002f - second lambda, got " << 0 << "\n"; }
-	  ).then(
- 	      [](const std::exception_ptr& e) {}
-	    , []() -> void { std::cout << "00002f - third lambda, got " << 0 << "\n"; throw 42; }
+    ).then(
+        [](const std::exception_ptr& e) {}
+      , []() -> void { std::cout << "00002f - third lambda, got " << 0 << "\n"; throw 42; }
     ).finally(
-  	    [](const std::exception_ptr& e) { std::cout << "0002f - exception\n"; }
-	).run();
+        [](const std::exception_ptr& e) { std::cout << "0002f - exception\n"; }
+  ).run();
 }
 
 #if !defined(INCORRECT_VARIADIC)
@@ -333,13 +333,13 @@ void t00003()
 {
   int n = 21;
   double a = 3.14;
-  
+
   cool::gcd::task::factory::create(
         test_runner
       , [] (int n, double pi) { std::cout << "00003 - first task: " << n << "\n"; return n; }
       , n, a
     ).then(
-		test_runner,
+        test_runner,
         [] (const std::exception_ptr& e) { }
       , [] (int res, int n, double d) { std::cout << "00003 - second task: " << (res+n) << "\n"; return n; }
       , n, a
@@ -393,7 +393,7 @@ void t00007()
   cool::gcd::task::factory::create(
         test_runner
       , [] () { std::cout << "00007 - first task: " << 21 << "\n"; throw cool::exception::operation_failed("hello world"); })
-	  .finally(
+    .finally(
         [] (const std::exception_ptr& e)
         {
           try { std::rethrow_exception(e); }
@@ -407,7 +407,7 @@ void t00007a()
   cool::gcd::task::factory::create(
         test_runner
       , [] () { std::cout << "00007a - first task: " << 21 << "\n"; })
-	  .finally(
+    .finally(
         [] (const std::exception_ptr& e)
         {
           try { std::rethrow_exception(e); }
@@ -417,18 +417,18 @@ void t00007a()
 }
 void t00008()
 {
-	int n = 42;
+  int n = 42;
   cool::gcd::task::factory::create(
         test_runner
-	  , []() { std::cout << "00008 - first task: " << 21 << "\n"; return 42; }
-	  ).then(
+      , []() { std::cout << "00008 - first task: " << 21 << "\n"; return 42; }
+    ).then(
         [] (const std::exception_ptr& e)
         {
           try { std::rethrow_exception(e); }
           catch (const std::exception& ee) { std::cout << "00008 - 2 caught exception: " << ee.what() << "\n"; }
         }
       , [n] (int res) { std::cout << "00008 - second task: " << n << "\n"; return n; }
-		  ).then(
+    ).then(
         [] (const std::exception_ptr& e)
         {
           try { std::rethrow_exception(e); }
@@ -442,21 +442,21 @@ void t00008()
           catch (const std::exception& ee) { std::cout << "00008 - 4 caught exception: " << ee.what() << "\n"; }
         }
       , [] () { std::cout << "00008 - fourth task: " << 42 << "\n"; return 42; }
-  	).then(
+    ).then(
         [] (const std::exception_ptr& e)
         {
           try { std::rethrow_exception(e); }
           catch (const std::exception& ee) { std::cout << "00008 - 5 caught exception: " << ee.what() << "\n"; }
         }
       , [n] (int a) -> int { std::cout << "00008 - fifth task: " << n << "\n"; throw cool::exception::operation_failed("hello world"); return n; }
-	  ).then(
+    ).then(
         [] (const std::exception_ptr& e)
         {
           try { std::rethrow_exception(e); }
           catch (const std::exception& ee) { std::cout << "00008 - 6 caught exception: " << ee.what() << "\n"; }
         }
       , [n] (int res) { std::cout << "00008 - sixth task: " << n << "\n"; return n; }
-		  ).then(
+    ).then(
         [] (const std::exception_ptr& e)
         {
           try { std::rethrow_exception(e); }
@@ -470,7 +470,7 @@ void t00008()
           catch (const std::exception& ee) { std::cout << "00008 - 8 caught exception: " << ee.what() << "\n"; }
         }
       , [] () { std::cout << "00008 - eighth task: " << 42 << "\n"; return 42; }
-  	).then(
+    ).then(
         [] (const std::exception_ptr& e)
         {
           try { std::rethrow_exception(e); }

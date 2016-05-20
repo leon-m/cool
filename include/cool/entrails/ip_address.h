@@ -38,14 +38,14 @@ template <std::size_t Size>
 cool::basis::binary<Size> calculate_mask(std::size_t length)
   {
     cool::basis::binary<Size> result;
-    
+
     if (length > Size * 8)
       throw exception::illegal_argument("Network mask length exceeds data size");
-    
+
     std::size_t limit = length >> 3;
     for (std::size_t i = 0; i < limit; ++i)
       result[i] = 0xff;
-    
+
     std::size_t limit2 = length & 0x07;
     if (limit2 > 0)
     {

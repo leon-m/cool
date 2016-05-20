@@ -50,20 +50,20 @@ template <typename T> class aim_base
 {
  protected:
   typedef entrails::state<T> state_t;
-  
+
  public:
   typedef vow<T>             vow_t;
-  
+
  private:
   typedef aim_base<T>        this_t;
-  
+
  protected:
   aim_base(const aim_base&)            = default;
   aim_base& operator= (aim_base&)      = default;
   aim_base(aim_base&& rhs)             = delete;
   aim_base& operator =(aim_base&& rhs) = delete;
   aim_base()                           = delete;
- 
+
  public:
   /**
    * Block until the result becomes available and return result.
@@ -122,13 +122,13 @@ template <typename T> class aim_base
    */
   template <typename Clock, typename Duration>
   T get(const std::chrono::time_point<Clock, Duration>& timepoint);
-  
+
  protected:
   aim_base(const typename state_t::ptr_t& state);
   bool then_base(bool& fail,
                  const typename state_t::success_cb_t& scb,
                  const typename state_t::failure_cb_t& fcb);
-  
+
  protected:
   typename state_t::ptr_t m_state;
 };
@@ -173,7 +173,7 @@ template <typename T> class aim_base
 template <typename T> class aim : public aim_base<T> {
  private:
   typedef aim<T>             this_t;
-  
+
  public:
   /**
    * Type of the result accessible through aim.
@@ -207,7 +207,7 @@ template <typename T> class aim : public aim_base<T> {
    * @c std::function<void(const vow<T>&, const T&)> .
    */
   typedef typename aim_base<T>::state_t::chained_cb_t chained_cb_t;
-  
+
  public:
   /**
    * Set the user callbacks.
@@ -235,10 +235,10 @@ template <typename T> class aim : public aim_base<T> {
    * callbacks.
    * @code
        cool::basis::vow<double> v;
-   
+
        {
          auto a = v.get_aim();
-   
+
          a.then(
            [] (const double& result)
            {
@@ -250,7 +250,7 @@ template <typename T> class aim : public aim_base<T> {
            }
          );
        }
-   
+
        std::thread t([=] () { v.set(42.42); } );
        t.join();
    * @endcode
@@ -298,11 +298,11 @@ template <typename T> class aim : public aim_base<T> {
   {
     std::cout << "++++++ OK final result " << result << std::endl;
   };
-  
+
   cool::basis::vow<double> v;
 
   v.get_aim().then(cb_1st).then(cb_2nd).then(cb_3rd, err_cb);
-  
+
   std::thread t([=] () { v.set(42.42); } );
   t.join();
    * @endcode
@@ -338,11 +338,11 @@ template <typename T> class aim : public aim_base<T> {
    *   to achieve the same effect,
    */
   this_t then(const chained_cb_t& ccb);
-  
+
   /**
    * Set the chain of user callbacks passing different result types.
    *
-   * This method template acts the same as the chained 
+   * This method template acts the same as the chained
    * @ref then(const chained_cb_t& ccb) "then()" but it allows results of different
    * to be passed between callbacks in the chain, as in the following code
    * fragment:
@@ -360,18 +360,18 @@ template <typename T> class aim : public aim_base<T> {
   {
     std::cout << "++++++ OK final result " << result << std::endl;
   };
-  
+
   cool::basis::vow<bool> v;
 
   v.get_aim().then<double>(cb_1st).then(cb_2nd, err_cb);
-  
+
   std::thread t([=] () { v.set(true); } );
   t.join();
    * @endcode
    */
   template <typename Y>
   aim<Y> then(const std::function<void (const vow<Y>&, const result_t&)>& ccb);
-  
+
  private:
   template <typename Y> friend class vow_base;
   aim(const typename aim_base<T>::state_t::ptr_t& state);
@@ -413,7 +413,7 @@ template <> class aim<void> : public aim_base<void>
    * @c std::function<void(const vow<void>&)> .
    */
   typedef aim_base<void>::state_t::chained_cb_t chained_cb_t;
-  
+
  public:
   /**
    * Set the user callbacks.
@@ -440,10 +440,10 @@ template <> class aim<void> : public aim_base<void>
    * callbacks.
    * @code
   cool::basis::vow<void> v;
-  
+
   {
     auto a = v.get_aim();
-    
+
     a.then(
       [] ()
       {
@@ -455,14 +455,14 @@ template <> class aim<void> : public aim_base<void>
       }
     );
   }
-  
+
   std::thread t([=] () { v.set(); } );
   t.join();
    * @endcode
    */
   dlldecl void then(const success_cb_t& scb,
             const failure_cb_t& fcb);
-  
+
   /**
    * Set the chain of user callbacks.
    *
@@ -503,11 +503,11 @@ template <> class aim<void> : public aim_base<void>
   {
     std::cout << "++++++ OK final callback called." << std::endl;
   };
-  
+
   cool::basis::vow<void> v;
 
   v.get_aim().then(cb_1st).then(cb_2nd).then(cb_3rd, err_cb);
-  
+
   std::thread t([=] () { v.set(); } );
   t.join();
    * @endcode
@@ -543,11 +543,11 @@ template <> class aim<void> : public aim_base<void>
    *   to achieve the same effect,
    */
   dlldecl this_t then(const chained_cb_t& ccb);
-  
+
   /**
    * Set the chain of user callbacks passing different result types.
    *
-   * This method template acts the same as the chained 
+   * This method template acts the same as the chained
    * @ref then(const chained_cb_t& ccb) "then()" but it allows results of different
    * to be passed between callbacks in the chain, as in the following code
    * fragment:
@@ -565,18 +565,18 @@ template <> class aim<void> : public aim_base<void>
   {
     std::cout << "++++++ OK final result " << result << std::endl;
   };
-  
+
   cool::basis::vow<void> v;
 
   v.get_aim().then<double>(cb_1st).then(cb_2nd, err_cb);
-  
+
   std::thread t([=] () { v.set(); } );
   t.join();
    * @endcode
    */
   template <typename Y>
   aim<Y> then(const std::function<void (const vow<Y>&)>& ccb);
-  
+
  private:
   template <typename Y> friend class vow_base;
   aim(const state_t::ptr_t& state);
@@ -604,9 +604,9 @@ template <typename T> class vow_base
   vow_base& operator= (const vow_base&);
   vow_base();
   ~vow_base();
-  
+
   void set(const std::exception_ptr&) const;
-  
+
  public:
   /**
    * Predicate to check whether the shared state was made ready.
@@ -629,7 +629,7 @@ template <typename T> class vow_base
    *  be associated with the same shared state.
    */
   aim_t get_aim() const;
-  
+
  protected:
   typename state_t::ptr_t m_state;
 };
@@ -640,9 +640,9 @@ template <typename T> class vow_base
  * @tparam T Type of the result to be reported to the vow.
  *
  * The cool::basis::vow class template provides a facility to store a result,
- * or an exception, of a function executing in a separate thread and which can 
- * later be acquired through cool::basis::aim object created by the 
- * cool::basis::vow object. Each cool::basis::vow object is associated with a 
+ * or an exception, of a function executing in a separate thread and which can
+ * later be acquired through cool::basis::aim object created by the
+ * cool::basis::vow object. Each cool::basis::vow object is associated with a
  * shared state, which
  * contain some state information and the <i>result</i>, which may not yet be
  * evaluated, evaluated to a value (possibly void) or evaluated to an
@@ -682,12 +682,12 @@ template <typename T> class vow : public vow_base<T>
   typedef T                       result_t;
   typedef vow<T>                  this_t;
   typedef std::shared_ptr<this_t> ptr_t;
-  
+
  public:
   vow(const vow&)              = default;
   vow& operator= (const vow&)  = default;
   vow();
-  
+
   /**
    * Store the exception into the shared state and make it ready.
    *
@@ -727,12 +727,12 @@ template <> class vow<void> : public vow_base<void>
   typedef void                       result_t;
   typedef vow<void>                  this_t;
   typedef std::shared_ptr<this_t>    ptr_t;
-  
+
  public:
   vow(const vow&)              = default;
   vow& operator= (const vow&)  = default;
   vow();
-  
+
   /**
    * Store the exception into the shared state and make it ready.
    *
@@ -767,17 +767,17 @@ template <> class vow<void> : public vow_base<void>
 template <typename T>
 aim_base<T>::aim_base(const typename state_t::ptr_t& state) : m_state(state)
 { /* noop */ }
-  
+
 template <typename T>
 T aim_base<T>::get()
 {
   std::unique_lock<std::mutex> lock(m_state->mutex());
-  
+
   m_state->cv().wait(lock, [this] () { return !m_state->is_empty(); });
-  
+
   if (!m_state->is_set())   // if already wasted through callbacks
     throw exception::illegal_state("Results were already consumed");
-  
+
   if (m_state->is_failure())
     std::rethrow_exception(m_state->failure());
 
@@ -788,16 +788,16 @@ template <typename T> template <typename Rep, typename Period>
 T aim_base<T>::get(const std::chrono::duration<Rep, Period>& interval)
 {
   std::unique_lock<std::mutex> lock(m_state->mutex());
-  
+
   if (!m_state->cv().wait_for(lock, interval, [this]() { return !m_state->is_empty(); }))
     throw exception::timeout("timeout expired");
-  
+
   if (!m_state->is_set())   // if already wasted through callbacks
     throw exception::illegal_state("Results were already consumed");
-  
+
   if (m_state->is_failure())
     std::rethrow_exception(m_state->failure());
-  
+
   return m_state->get_result();
 }
 
@@ -805,16 +805,16 @@ template <typename T> template <typename Clock, typename Duration>
 T aim_base<T>::get(const std::chrono::time_point<Clock, Duration>& tp)
 {
   std::unique_lock<std::mutex> lock(m_state->mutex());
-  
+
   if (!m_state->cv().wait_until(lock, tp, [&]() { return !m_state->is_empty(); }))
     throw exception::timeout("timeout expired");
-  
+
   if (!m_state->is_set())   // if already wasted through callbacks
     throw exception::illegal_state("Results were already consumed");
-  
+
   if (m_state->is_failure())
     std::rethrow_exception(m_state->failure());
-  
+
   return m_state->get_result();
 }
 
@@ -824,9 +824,9 @@ bool aim_base<T>::then_base(bool& fail
                         , const typename state_t::failure_cb_t& fcb)
 {
   bool fire = false;
-  
+
   std::unique_lock<std::mutex> l(m_state->mutex());
-    
+
   fire = m_state->is_set();
   if (fire)
   {
@@ -838,7 +838,7 @@ bool aim_base<T>::then_base(bool& fail
     m_state->on_success(scb);
     m_state->on_failure(fcb);
   }
-  
+
   return fire;
 }
 
@@ -879,7 +879,7 @@ typename aim<T>::this_t aim<T>::then(const typename aim_base<T>::state_t::chaine
 {
   typename aim_base<T>::vow_t* p = new typename aim_base<T>::vow_t();
   this_t h = p->get_aim();
-  
+
   then(
     [=] (const T& val)
     {
@@ -897,7 +897,7 @@ typename aim<T>::this_t aim<T>::then(const typename aim_base<T>::state_t::chaine
       delete p;
     }
   );
-  
+
   return h;
 }
 
@@ -906,7 +906,7 @@ aim<Y> aim<T>::then(const std::function<void (const vow<Y>&, const T&)>& ccb)
 {
   vow<Y>* p = new vow<Y>();
   auto h = p->get_aim();
-  
+
   then(
     [=] (const T& val)
     {
@@ -924,7 +924,7 @@ aim<Y> aim<T>::then(const std::function<void (const vow<Y>&, const T&)>& ccb)
       delete p;
     }
   );
-  
+
   return h;
 }
 
@@ -937,7 +937,7 @@ aim<Y> aim<void>::then(const std::function<void (const vow<Y>&)>& ccb)
 {
   vow<Y>* p = new vow<Y>();
   auto h = p->get_aim();
-    
+
   then(
     [=] ()
     {
@@ -955,10 +955,10 @@ aim<Y> aim<void>::then(const std::function<void (const vow<Y>&)>& ccb)
        delete p;
      }
   );
-    
+
   return h;
 }
-  
+
 
 // --------------------------------------------------------------------------
 //
@@ -1001,19 +1001,19 @@ void vow_base<T>::set(const std::exception_ptr& err) const
 
   {
     std::unique_lock<std::mutex> l(m_state->mutex());
-    
+
     if (!m_state->is_empty())
       throw exception::illegal_state("This vow was already set.");
-      
+
     m_state->failure(err);
-    
+
     fcb = std::move(m_state->on_failure());
     if (fcb)
       m_state->deplete();
     else
       m_state->cv().notify_all();
   }
-  
+
   if (fcb)
   {
     fcb(m_state->failure());
@@ -1047,13 +1047,13 @@ template <typename T>
 void vow<T>::set(const T& value) const
 {
   typename vow_base<T>::state_t::success_cb_t scb;
-  
+
   {
     std::unique_lock<std::mutex> l (vow_base<T>::m_state->mutex());
-    
+
     if (!vow_base<T>::m_state->is_empty())
       throw exception::illegal_state("This vow was already set.");
-    
+
     vow_base<T>::m_state->set_result(value);
     scb = std::move(vow_base<T>::m_state->on_success());
     if (scb)
@@ -1061,7 +1061,7 @@ void vow<T>::set(const T& value) const
     else
       vow_base<T>::m_state->cv().notify_all();
   }
-  
+
   if (scb)
   {
     scb(vow_base<T>::m_state->get_result());

@@ -44,7 +44,7 @@ void cleanup_reverse(taskinfo* info_)
 void cleanup(taskinfo* info_)
 {
   entrails::taskinfo* aux;
-  
+
   while (info_ != nullptr)
   {
     aux = info_->m_next;
@@ -68,11 +68,11 @@ void kickstart(taskinfo* info_)
 {
   if (info_ == nullptr)
     throw cool::exception::illegal_state("this task object is in undefined state");
-    
+
   auto&& aux = info_->m_runner.lock();
   if (!aux)
     throw runner_not_available();
-    
+
   aux->task_run(info_);
 }
 
@@ -81,7 +81,7 @@ void kickstart(taskinfo* info_, const std::exception_ptr& e_)
   auto aux = info_->m_runner.lock();
   if (aux)
   {
-    aux->task_run(new task_t(std::bind(info_->m_eh,  e_)));
+    aux->task_run(new task_t(std::bind(info_->m_eh, e_)));
   }
 }
 
@@ -286,10 +286,10 @@ void group::wait(int64_t interval)
 {
   if (interval < 0)
     throw cool::exception::illegal_argument("Cannot use negative wait interval.");
-  
+
   if (::dispatch_group_wait(m_group, ::dispatch_time(DISPATCH_TIME_NOW, interval)) == 0)
     return;
-  
+
   throw cool::exception::timeout("Timeout while waiting for tasks to complete");
 }
 

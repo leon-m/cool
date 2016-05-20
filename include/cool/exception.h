@@ -18,7 +18,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
- 
+
 #if !defined(EXCEPTION_H_HEADER_GUARD)
 #define EXCEPTION_H_HEADER_GUARD
 
@@ -134,7 +134,7 @@ class runtime_exception : public base
  public:
   dlldecl runtime_exception(const std::string& msg) : base(msg) { /* noop */ }
 };
-  
+
 class create_failure : public runtime_exception
 {
  public:
@@ -152,7 +152,7 @@ class bad_conversion : public runtime_exception
  public:
   dlldecl bad_conversion(const std::string& msg) : runtime_exception(msg) { /* noop */ }
 };
-  
+
 
 class unsupported_operation : public runtime_exception
 {
