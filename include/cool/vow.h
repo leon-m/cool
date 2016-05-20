@@ -272,9 +272,9 @@ template <typename T> class aim : public aim_base<T> {
    * the last link in the chain.
    *
    * @param ccb Chained callback to be called when the shared state is made ready
-   *  the result is set.
+   *   the result is set.
    * @return The aim object associated with the vow object passed to the user
-   *  callback.
+   *   callback.
    *
    * <b>Example</b><br>
    * This simplified example illustrates the use of the chained then(). This
@@ -477,9 +477,9 @@ template <> class aim<void> : public aim_base<void>
    * the last link in the chain.
    *
    * @param ccb Chained callback to be called when the shared state is made ready
-   *  the result is set.
+   *   the result is set.
    * @return The aim object associated with the vow object passed to the user
-   *  callback.
+   *   callback.
    *
    * <b>Example</b><br>
    * This simplified example illustrates the use of the chained then(). This
@@ -589,8 +589,8 @@ template <> class aim<void> : public aim_base<void>
  * @tparam  T Type of the result to be reported to the associated aim<T> object.
  *
  * @note This class template servers as the base class for the
- *  vow<T> class template and its specializations. It cannot be
- *  used on its own.
+ *   vow<T> class template and its specializations. It cannot be
+ *   used on its own.
  *
  * @see @ref cool::basis::vow "vow<T>"
  */
@@ -624,9 +624,9 @@ template <typename T> class vow_base
    * @return cool::basis::aim object associated with vow object.
    *
    * @note Multiple calls to get_aim() are permitted. All cool::basis::aim
-   *  objects returned through multiple calls to get_aim() on vow object, or
-   *  multiple vow objects associated with the same shared state, will
-   *  be associated with the same shared state.
+   *   objects returned through multiple calls to get_aim() on vow object, or
+   *   multiple vow objects associated with the same shared state, will
+   *   be associated with the same shared state.
    */
   aim_t get_aim() const;
 
@@ -695,7 +695,7 @@ template <typename T> class vow : public vow_base<T>
    *            into the shared state.
    *
    * @exception cool::exception::illegal thrown if the shared
-   *    state associated with the vow object was already made ready.
+   *   state associated with the vow object was already made ready.
    *
    * @note The call to set() will invoke the user callback if one was set
    *   through one of then() overloads of associated  cool::basis::aim object.
@@ -707,7 +707,7 @@ template <typename T> class vow : public vow_base<T>
    * @param value result to be stored into the shared state.
    *
    * @exception cool::exception::illegal_state thrown if the shared
-   *    state associated with the vow object was already made ready.
+   *   state associated with the vow object was already made ready.
    *
    * @note The call to set() will invoke the user callback if one was set
    *   through one of then() overloads of associated  cool::basis::aim object.
@@ -740,7 +740,7 @@ template <> class vow<void> : public vow_base<void>
    *            into the shared state.
    *
    * @exception cool::exception::illegal_state thrown if the shared
-   *    state associated with the vow object was already made ready.
+   *   state associated with the vow object was already made ready.
    *
    * @note The call to set() will invoke the user callback if one was set
    *   through one of then() overloads of associated  cool::basis::aim object.
@@ -750,7 +750,7 @@ template <> class vow<void> : public vow_base<void>
    * Make the shared state ready.
    *
    * @exception cool::exception::illegal_state thrown if the shared
-   *    state associated with the vow object was already made ready.
+   *   state associated with the vow object was already made ready.
    *
    * @note The call to set() will invoke the user callback if one was set
    *   through one of then() overloads of associated  cool::basis::aim object.

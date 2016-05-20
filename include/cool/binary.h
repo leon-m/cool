@@ -207,7 +207,7 @@ template <std::size_t Size> class binary
    * @param data byte array, right hand side operand
    * @return new binary buffer with results
    * @note The operator assumes that the byte array is at elast as large as the
-   *  binary buffer.
+   *   binary buffer.
    */
   binary operator &(uint8_t const data[]) const
   {
@@ -239,7 +239,7 @@ template <std::size_t Size> class binary
    * @param data byte array, right hand side operand
    * @return new binary buffer with results
    * @note The operator assumes that the byte array is at elast as large as the
-   *  binary buffer.
+   *   binary buffer.
    */
   binary operator |(uint8_t const data[]) const
   {
@@ -271,7 +271,7 @@ template <std::size_t Size> class binary
    * @param data byte array, right hand side operand
    * @return new binary buffer with results
    * @note The operator assumes that the byte array is at elast as large as the
-   *  binary buffer.
+   *   binary buffer.
    */
   binary operator ^(uint8_t const data[]) const
   {
@@ -300,7 +300,7 @@ template <std::size_t Size> class binary
    * @param start start offset
    * @param data input data array
    * @exception cool::exception::out_of_range thrown if start offset is beyond
-   *  the binary buffer size
+   *   the binary buffer size
    * @note The method assumes that the input byte array is large enough
    */
   void set(int start, uint8_t const data[])
@@ -318,9 +318,9 @@ template <std::size_t Size> class binary
    * @param data input data array
    * @param size number of bytes to set
    * @exception cool::exception::out_of_range thrown if start offset is beyond
-   *  the binary buffer size
+   *   the binary buffer size
    * @note The actual number of bytes set may be less than the requested size
-   *  if the @c start + @c size would exceed the binary buffer size
+   *   if the @c start + @c size would exceed the binary buffer size
    */
   void set(int start, uint8_t const data[], int size)
   {

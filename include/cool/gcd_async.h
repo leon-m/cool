@@ -60,7 +60,7 @@ namespace async {
  * specified task::runner.
  *
  * @note Upon object creation the reader is in the stopped state and must
- *  be explicitly started.
+ *   be explicitly started.
  *
  * <b>Thread Safety</b><br>
  *
@@ -82,8 +82,8 @@ class reader : public entrails::fd_io
   * handler receives the following parameters:
   *
   * @param fd file descriptor associated with the reader
-  * @param count  approximate number of bytes available. Note that the actual
-  * number of bytes may differ when actually read.
+  * @param count   approximate number of bytes available. Note that the actual
+  *   number of bytes may differ when actually read.
   */
   typedef entrails::fd_io::handler_t handler_t;
 
@@ -114,8 +114,8 @@ class reader : public entrails::fd_io
    * new data is ready for reading.
    *
    * @note Immediatelly after creation the asyncronous reader is in the stopped
-   * state. The user must exlicitly call start() in order to start the
-   * operations.
+   *   state. The user must exlicitly call start() in order to start the
+   *   operations.
    */
   void start() { resume(); }
   /**
@@ -241,8 +241,8 @@ class writer
  * cool::gcd::async::writer classes.
  *
  * @note Upon creation the reader part of the asynchronous reader/writer is
- *  in the stopped state and must be explicitly started. The writer part. however,
- *  is immediately ready  to accept write requests.
+ *   in the stopped state and must be explicitly started. The writer part. however,
+ *   is immediately ready to accept write requests.
  *
  * <b>Thread Safety</b><br>
  * Instances of cool::gcd::async::writer class are not thread safe.
@@ -309,8 +309,8 @@ class reader_writer
    * new data is ready for reading.
    *
    * @note Immediatelly after creation the reader is in the stopped
-   * state. The user must exlicitly call start() in order to start the
-   * operations.
+   *   state. The user must exlicitly call start() in order to start the
+   *   operations.
    */
   void start() { m_rd.start(); }
   /**
@@ -358,12 +358,12 @@ class reader_writer
  *   upon arrival of the signal.
  *
  * @warning When the signal object is created it will set the signal(2) handler
- *  to SIG_IGN. This setting remains effective event after the last signal
- *  object for this signal number is destroyed.
+ *   to SIG_IGN. This setting remains effective event after the last signal
+ *   object for this signal number is destroyed.
  *
  * @warning Manipulating the software signal via signal(2) or sigaction(2)
- *  interfaces after the signal object for this software signal is created
- *  results in undefined behavior.
+ *   interfaces after the signal object for this software signal is created
+ *   results in undefined behavior.
  *
  * <b>Thread Safety</b><br>
  * Instances of cool::gcd::async::signal class are not thread safe.
@@ -402,7 +402,7 @@ class signal : public entrails::async_source<std::function<void(int, int)>, int>
    * @param handler Handler to be called when the software signal is detected.
    * @exception cool::exception::create_failure Thrown if signal object cannot be created.
    * @exception cool::exception::illegal_argument Thrown if signal number is out of range
-   *    or if it equals to SIGKILL or SIGSTOP, which cannot be intercepted.
+   *   or if it equals to SIGKILL or SIGSTOP, which cannot be intercepted.
    *
    * Upon arrival of the specified sofware signal the callback is called from the
    * context of @ref cool::gcd::task::runner::sys_default() "the default system runner".
@@ -417,7 +417,7 @@ class signal : public entrails::async_source<std::function<void(int, int)>, int>
    *
    * @exception cool::exception::create_failure Thrown if signal object cannot be created
    * @exception cool::exception::illegal_argument Thrown if signal number is out of range
-   *    or if it equals to SIGKILL or SIGSTOP, which cannot be intercepted.
+   *   or if it equals to SIGKILL or SIGSTOP, which cannot be intercepted.
    */
   signal(int signo, const handler_t& handler, const task::runner& runner);
   /**
@@ -459,13 +459,13 @@ class signal : public entrails::async_source<std::function<void(int, int)>, int>
  * @ref cool::gcd::task::runner "runner" to call the user callback.
  *
  * @note Upon creation the timer object is inactive and must be explicitly
- *  started using start().
+ *   started using start().
  * @note Timer objects created via copy construction or copy assignment
- *  are clones and refer to the same underlying system timer. Any changes
- *  made through one of the clones will affect all clones. The system
- *  timer will be destroyed when the last clone is destroyed. You can use
- *  name() method to check whether two timer objects are clones; all clones
- *  have the same name.
+ *   are clones and refer to the same underlying system timer. Any changes
+ *   made through one of the clones will affect all clones. The system
+ *   timer will be destroyed when the last clone is destroyed. You can use
+ *   name() method to check whether two timer objects are clones; all clones
+ *   have the same name.
  *
  * @warning The user callback must not throw.
  *
@@ -489,7 +489,7 @@ class timer : public basis::named,
    *   calls.
    *
    * @note If the timer is suspended through the call to suspend() it will
-   *  still trigger at each period but without calling the user callback.
+   *   still trigger at each period but without calling the user callback.
    *
    * @warning The user callback must not throw.
    */
@@ -507,7 +507,7 @@ private:
    * @param handler The user specified callback.
    * @param runner  The @ref cool::gcd::task::runner "runner" to use to
    *                call the user callback from
-   * @param period The period of the timer.
+   * @param period  The period of the timer.
    *
    * @exception cool::exception::create_failure Thrown if timer cannot be created.
    * @exception cool::exception::illegal_argument Thrown if the period is set to 0.
@@ -536,7 +536,7 @@ private:
    * @param handler The user specified callback.
    * @param runner  The @ref cool::gcd::task::runner "runner" to use to
    *                call the user callback from
-   * @param period The period of the timer.
+   * @param period  The period of the timer.
    *
    * @exception cool::exception::create_failure Thrown if timer cannot be created.
    * @exception cool::exception::illegal_argument Thrown if the period is set to 0.
@@ -564,7 +564,7 @@ private:
    * @param handler The user specified callback.
    * @param runner  The @ref cool::gcd::task::runner "runner" to use to
    *                call the user callback from
-   * @param period The period of the timer.
+   * @param period  The period of the timer.
    * @param leeway  The amount of time the system can defer the timer.
    *
    * @exception cool::exception::create_failure Thrown if timer cannot be created.
@@ -596,7 +596,7 @@ private:
    * @param handler The user specified callback.
    * @param runner  The @ref cool::gcd::task::runner "runner" to use to
    *                call the user callback from
-   * @param period The period of the timer.
+   * @param period  The period of the timer.
    * @param leeway  The amount of time the system can defer the timer.
    *
    * @exception cool::exception::create_failure Thrown if timer cannot be created.
@@ -727,7 +727,7 @@ private:
    * time the period must be set before they can be started. When changing the
    * period the new period becomes effective after the call to start().
    *
-   * @param period The period of the timer.
+   * @param period  The period of the timer.
    *
    * @exception cool::exception::illegal_argument Thrown if the period is set to 0.
    *
@@ -748,7 +748,7 @@ private:
    * time the period must be set before they can be started. When changing the
    * period the new period becomes effective after the call to start().
    *
-   * @param period The period of the timer.
+   * @param period  The period of the timer.
    * @param leeway  The amount of time the system can defer the timer.
    *
    * @exception cool::exception::illegal_argument Thrown if the period is set to 0.
@@ -769,7 +769,7 @@ private:
    * time the period must be set before they can be started. When changing the
    * period the new period becomes effective after the call to start().
    *
-   * @param period The period of the timer in nanoseconds.
+   * @param period  The period of the timer in nanoseconds.
    * @param leeway  The amount of time, in nanoseconds, the system can defer the timer.
    *
    * @exception cool::exception::illegal_argument Thrown if the period is set to 0.
@@ -847,7 +847,7 @@ private:
  * a single value..
  *
  * @note The fs_observer object is not active upon creation, and will not
- *  call the user handler when triggered. Use start() method to activate it.
+ *   call the user handler when triggered. Use start() method to activate it.
  *
  * <b>Thread Safety</b><br>
  *
@@ -914,9 +914,9 @@ class fs_observer : public entrails::async_source<std::function<void(unsigned lo
    *   defaults to @ref cool::gcd::task::runner::cool_default() "library global runner"
    *
    * @note The fs_observer object is not active upon creation, and will not
-   *  call the user handler when triggered. Use start() method to activate it.
+   *   call the user handler when triggered. Use start() method to activate it.
    * @warning The fs_object takes ownership of the file descriptior and will
-   *  close it upon destruction.
+   *   close it upon destruction.
    */
   fs_observer(const handler_t& handler,
               int fd,
@@ -962,7 +962,7 @@ class fs_observer : public entrails::async_source<std::function<void(unsigned lo
  * being set of characteristics that have changed.
  *
  * @note The data_observer object is not active upon creation, and will not
- *  call the user handler when triggered. Use start() method to activate it.
+ *   call the user handler when triggered. Use start() method to activate it.
  *
  * <b>Thread Safety</b><br>
  * Instances of cool::gcd::async::data_observer class are thread safe.
@@ -1013,7 +1013,7 @@ class data_observer : public entrails::async_source<std::function<void(unsigned 
    *   is ignored if merge strategy is set to CoalesceStrategy::Add.
    *
    * @note The data_observer object is not active upon creation, and will not
-   *  call the user handler when triggered. Use start() method to activate it.
+   *   call the user handler when triggered. Use start() method to activate it.
    */
   dlldecl data_observer(const handler_t& handler,
                 const task::runner& runner = gcd::task::runner::cool_default(),
@@ -1065,7 +1065,7 @@ class data_observer : public entrails::async_source<std::function<void(unsigned 
  * an event when one or more observed things happed to the observed process.
  *
  * @note The proc_observer object is not active upon creation, and will not
- *  call the user handler when triggered. Use start() method to activate it.
+ *   call the user handler when triggered. Use start() method to activate it.
  *
  * <b>Thread Safety</b><br>
  * Instances of cool::gcd::async::proc_observer class are thread safe.
@@ -1116,7 +1116,7 @@ class proc_observer : public entrails::async_source<std::function<void(unsigned 
    *      - EXEC; notify when the observed process becomes another executable
    *      - SIGNAL; notify when a software signal is delivered to the observed process
    * @note The proc_observer object is not active upon creation, and will not
-   *  call the user handler when triggered. Use start() method to activate it.
+   *   call the user handler when triggered. Use start() method to activate it.
    */
   proc_observer(const handler_t& handler,
                 pid_t pid,

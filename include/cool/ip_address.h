@@ -106,9 +106,9 @@ class address
    *   be assigned to this address object
    *
    * @see @ref ipv6::rfc_ipv4map "IPv6 network prefix" for IPv4 mapped
-   *  addresses.
+   *   addresses.
    * @see @ref ipv6::rfc_ipv4translate "IPv6 network prefix" for IPv4 translated
-   *  addresses
+   *   addresses
    */
   virtual address& operator =(const address& rhs)
   {
@@ -129,13 +129,13 @@ class address
    *   will compare equal to the corresponding @ref cool::net::ip::IPv4 "IPv4" addresses.
    *
    * @see @ref ipv6::rfc_ipv4map "IPv6 network prefix" for IPv4 mapped
-   *  addresses.
+   *   addresses.
    * @see @ref ipv6::rfc_ipv4translate "IPv6 network prefix" for IPv4 translated
-   *  addresses
+   *   addresses
    * @see @ref operator ==(const cool::net::ip::address&, const cool::net::ip::address&)
-   *     "global == operator" overload
+   *   "global == operator" overload
    * @see @ref operator !=(const cool::net::ip::address&, const cool::net::ip::address&)
-   *     "global != operator" overload
+   *   "global != operator" overload
    */
   virtual bool equals(const address& other) const = 0;
   /**
@@ -153,11 +153,11 @@ class address
    * @param os Output stream to write the visual presentation to
    *
    * @see @ref operator <<(std::ostream& os, const cool::net::ip::address& val)
-   *     "global << operator" overload
+   *   "global << operator" overload
    * @see @ref ipv6::rfc_ipv4map "IPv6 network prefix" for IPv4 mapped
-   *  addresses.
+   *   addresses.
    * @see @ref ipv6::rfc_ipv4translate "IPv6 network prefix" for IPv4 translated
-   *  addresses
+   *   addresses
   */
   virtual void visualize(std::ostream& os) const = 0;
   /**
@@ -192,7 +192,7 @@ class address
    * Type conversion operator.
    *
    * @return <tt>struct in_addr</tt> filled with IPv4 address represented by
-   *  this address object.
+   *   this address object.
    *
    * @exception exception::bad_conversion if this address object is not
    *   IPv4 address or is not IPv6 host address mapped or translated from
@@ -204,9 +204,9 @@ class address
    *   rightmost four bytes of the IPv6 host address.
    *
    * @see @ref ipv6::rfc_ipv4map "IPv6 network prefix" for IPv4 mapped
-   *  addresses.
+   *   addresses.
    * @see @ref ipv6::rfc_ipv4translate "IPv6 network prefix" for IPv4 translated
-   *  addresses
+   *   addresses
    */
   virtual operator struct in_addr() const;
   /**
@@ -225,7 +225,7 @@ class address
    *   IPv4 network address that cannot be converted to IPv6 address.
    *
    * @see @ref ipv6::rfc_ipv4map "IPv6 network prefix" for IPv4 mapped
-   *  addresses.
+   *   addresses.
    */
   virtual operator struct in6_addr() const;
   /**
@@ -256,15 +256,15 @@ class address
    * Assignment operator.
    *
    * Assigns the IP address contained in <tt>struct in_addr</tt> to this
-   * address object.  If this address object is an IPv6 host address, the
+   * address object. If this address object is an IPv6 host address, the
    * supplied IPv4 address is mapped into IPv6 address using the
    * @ref ipv6::rfc_ipv4map "standard network prefix" for IPv4 mapped addresses.
    *
    * @exception exception::bad_conversion if this address object is
-   *  neitherIPv4 address nor IPv6 host address.
+   *   neitherIPv4 address nor IPv6 host address.
    *
    * @see @ref ipv6::rfc_ipv4map "IPv6 network prefix" for IPv4 mapped
-   *  addresses.
+   *   addresses.
    */
   virtual address& operator =(const in_addr&);
   /**
@@ -281,9 +281,9 @@ class address
    *     - this address object is IPv4 network address
    *
    * @see @ref ipv6::rfc_ipv4map "IPv6 network prefix" for IPv4 mapped
-   *  addresses.
+   *   addresses.
    * @see @ref ipv6::rfc_ipv4translate "IPv6 network prefix" for IPv4 translated
-   *  addresses
+   *   addresses
    */
   virtual address& operator =(const in6_addr&);
   /**
@@ -293,7 +293,7 @@ class address
    *
    * @exception exception::illegal_state The textual presentation is not parsable
    * @exception exception::illegal_argument The textual presentation contains
-   *       invalid characters.
+   *   invalid characters.
    */
   virtual address& operator =(const std::string&) = 0;
   /**
@@ -345,9 +345,9 @@ class host : public address
    *   be assigned to this address object
    *
    * @see @ref ipv6::rfc_ipv4map "IPv6 network prefix" for IPv4 mapped
-   *  addresses.
+   *   addresses.
    * @see @ref ipv6::rfc_ipv4translate "IPv6 network prefix" for IPv4 translated
-   *  addresses
+   *   addresses
    */
   address& operator =(const address& rhs) override = 0;
   virtual Kind kind() const override { return HostAddress; }
@@ -488,7 +488,7 @@ class host : public ip::host
    *
    * @exception exception::illegal_state The textual presentation is not parsable
    * @exception exception::illegal_argument The textual presentation contains
-   *       invalid characters.
+   *   invalid characters.
    */
   explicit host(const std::string& data);
   /**
@@ -603,7 +603,7 @@ class network : public ip::network
    *
    * @exception exception::illegal_state The textual presentation is not parsable
    * @exception exception::illegal_argument The textual presentation contains
-   *       invalid characters.
+   *   invalid characters.
    */
   explicit network(const std::string& data);
   /**
@@ -774,9 +774,9 @@ class host : public ip::host
    *   is not valid.
    *
    * @see @ref ipv6::rfc_ipv4map "IPv6 network prefix" for IPv4 mapped
-   *  addresses.
+   *   addresses.
    * @see @ref ipv6::rfc_ipv4translate "IPv6 network prefix" for IPv4 translated
-   *  addresses
+   *   addresses
    */
   explicit host(const in6_addr& data);
   /**
@@ -784,7 +784,7 @@ class host : public ip::host
    *
    * @exception exception::illegal_state The textual presentation is not parsable
    * @exception exception::illegal_argument The textual presentation contains
-   *       invalid characters.
+   *   invalid characters.
    */
   explicit host(const std::string& data);
   /**
@@ -794,9 +794,9 @@ class host : public ip::host
    * IPv4 mapped or translated addresses.
    *
    * @see @ref ipv6::rfc_ipv4map "IPv6 network prefix" for IPv4 mapped
-   *  addresses.
+   *   addresses.
    * @see @ref ipv6::rfc_ipv4translate "IPv6 network prefix" for IPv4 translated
-   *  addresses
+   *   addresses
    * @exception exception:: illegal_argument Thrown if argument address object
    *   is not valid.
    */
@@ -887,7 +887,7 @@ class network : public ip::network
    *
    * @exception exception::illegal_state The textual presentation is not parsable
    * @exception exception::illegal_argument The textual presentation contains
-   *       invalid characters.
+   *   invalid characters.
    */
   explicit network(const std::string& data);
   /**
@@ -1123,9 +1123,9 @@ inline std::ostream& operator <<(std::ostream& os, const cool::net::ip::address&
  * character available in the input stream.
  *
  * @exception cool::exception::illegal_argument Thrown if the address cannot
- * be parsed.
+ *   be parsed.
  * @exception cool::exception::illegal_state Thrown if the address cannot
- * be parsed.
+ *   be parsed.
  */
 std::istream& operator >>(std::istream& is, cool::net::ip::address& val);
 

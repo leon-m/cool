@@ -98,8 +98,8 @@ class runner_not_available : public cool::exception::runtime_exception
  * to either be notified about, or to collect the result of each task.
  *
  * @note The runner objects normally represent independent task queues. However,
- *  the runner objects created using copy construction or copy assignment
- *  operator are considered clones and represent the same task queue.
+ *   the runner objects created using copy construction or copy assignment
+ *   operator are considered clones and represent the same task queue.
  *
  * <b>Thread Safety</b><br>
  * Although the main use model is not multi-thread scenario, the runner objects
@@ -130,10 +130,10 @@ class runner : public named
    *    is DISPATCH_QUEUE_SERIAL
    *
    * @exception cool::exception::create_failure thrown if a new instance cannot
-   *    be created.
+   *   be created.
    *
    * @note The runner object is created in started state and is immediatelly
-   *    capable of executing tasks.
+   *   capable of executing tasks.
    *
    * <b>Portability</b><br>
    * This constructor is only available on OS/X operating system. Only the
@@ -153,9 +153,9 @@ class runner : public named
    * Destroys the runner object.
    *
    * @note Note that before being destroyed the stopped runner is restarted. The
-   *    execution of all tasks waiting in the runner's queue will continue even
-   *    after the runner object destruction and will cease only after the completion
-   *    of the last task.
+   *   execution of all tasks waiting in the runner's queue will continue even
+   *   after the runner object destruction and will cease only after the completion
+   *   of the last task.
    */
   dlldecl ~runner();
   /**
@@ -202,18 +202,18 @@ class runner : public named
    * @exception cool::exception::illegal_state thrown if this runner was closed.
    *
    * @warning
-   * The cool::basis::aim object returned by this method is meant for thread
-   * synchronization in multi-threading programming model. As such it refers
-   * to a shared state which is shared with the associated cool::basis::vow.
-   * The shared state is guarded by internal @c std::mutex. The thread
-   * safety may incurr an unnecessary overhead in pure asynchronous programming
-   * model. When multi-thread synchronization is not the issue, use
-   * @ref cool::gcd::task::task "task" approach instead.
+   *   The cool::basis::aim object returned by this method is meant for thread
+   *   synchronization in multi-threading programming model. As such it refers
+   *   to a shared state which is shared with the associated cool::basis::vow.
+   *   The shared state is guarded by internal @c std::mutex. The thread
+   *   safety may incurr an unnecessary overhead in pure asynchronous programming
+   *   model. When multi-thread synchronization is not the issue, use
+   *   @ref cool::gcd::task::task "task" approach instead.
    *
    * @note
-   * Due to incorrect handling of empty parameter packs for variadic templates,
-   * the Callable object may not accept parameters when used in Microsoft
-   * Visual Studio 2013.
+   *   Due to incorrect handling of empty parameter packs for variadic templates,
+   *   the Callable object may not accept parameters when used in Microsoft
+   *   Visual Studio 2013.
    */
 #if defined(INCORRECT_VARIADIC)
   template <typename Function>
@@ -395,20 +395,20 @@ class runner : public named
  * or by one of the task::then() method templates.
  *
  * @exception cool::gcd::task::runner_not_available thrown if, when the asks are
- *  to be submitted for execution to theire respective
- *  @ref cool::gcd::task::runner "runner" task queues, the destination runner
- *  not longer exists. In this case, the task library will throw this exception,
- *  which will be passed to the error handler provided throguh one of the 
- *  @ref task::then() "then()" methods. Note however, than if the error handler
- *  was to be run on the same runner that is no longer available, the error
- *  handler will not be scheduled to run and this exception will disappear
- *  unnoticed. This exception is thrown during the task sequence execution and is
- *  asynchronous with regard to the code that constructed and manipulated the
- *  task object(s).
+ *   to be submitted for execution to theire respective
+ *   @ref cool::gcd::task::runner "runner" task queues, the destination runner
+ *   not longer exists. In this case, the task library will throw this exception,
+ *   which will be passed to the error handler provided throguh one of the
+ *   @ref task::then() "then()" methods. Note however, than if the error handler
+ *   was to be run on the same runner that is no longer available, the error
+ *   handler will not be scheduled to run and this exception will disappear
+ *   unnoticed. This exception is thrown during the task sequence execution and is
+ *   asynchronous with regard to the code that constructed and manipulated the
+ *   task object(s).
  *
  * @exception cool::exception::illegal_state thrown immediately by task methods
- *  if the task object on which the methods was tried is no longer valid. This
- *  exception is synchronous with regard to the caller of the method.
+ *   if the task object on which the methods was tried is no longer valid. This
+ *   exception is synchronous with regard to the caller of the method.
  *
  *
  * <b>Portability and Limitations</b><br>
@@ -488,7 +488,7 @@ template <typename Result> class task
    *    is non-void, or as the first, second, etc. argument if it is void.
    *
    * @return a new task object, which is to be used from this point on instead
-   *    of the current task object.
+   *   of the current task object.
    *
    * If the current task throws an exception during its execution, the task
    * library will schedule an error handler (@c err_) for the execution and will not
@@ -499,8 +499,8 @@ template <typename Result> class task
    * that ran the current task.
    *
    * @note This method invalidates the current (@c this) object, and returns
-   *    a new task object. All further operations must be performed on a new
-   *    object.
+   *   a new task object. All further operations must be performed on a new
+   *   object.
    *
    * @note Note that since all @ref then() methods invalidate the current and
    *   return a new task object, the used runner will the last runner explicitly
@@ -559,7 +559,7 @@ template <typename Result> class task
    *    is non-void, or as the first, second, etc. argument if it is void.
    *
    * @return a new task object, which is to be used from this point on instead
-   *    of the current task object.
+   *   of the current task object.
    *
    * If the current task throws an exception during its execution, the task
    * library will schedule an error handler (@c err_) for the execution and will not
@@ -570,8 +570,8 @@ template <typename Result> class task
    * specified by parameter @c runner_ .
    *
    * @note This method invalidates the current (@c this) object, and returns
-   *    a new task object. All further operations must be performed on a new
-   *    object.
+   *   a new task object. All further operations must be performed on a new
+   *   object.
    *
    * @warning The error handler @c err is scheduled for the execution
    *   if the preceding task threw an exception. Scheduling the error handler
@@ -632,8 +632,8 @@ template <typename Result> class task
    * task.
    *
    * @note This method invalidates the current (@c this) object, and returns
-   *    a new task object. All further operations must be performed on a new
-   *    object.
+   *   a new task object. All further operations must be performed on a new
+   *   object.
    * @note Note that since all @ref then() methods invalidate the current and
    *   return a new task object, the used runner will the last runner explicitly
    *   passed to any preceding task through @ref then(), or the runner specified
@@ -658,8 +658,8 @@ template <typename Result> class task
    * handling task is run by the runner specified by @c runner_ parameter.
    *
    * @note This method invalidates the current (@c this) object, and returns
-   *    a new task object. All further operations must be performed on a new
-   *    object.
+   *   a new task object. All further operations must be performed on a new
+   *   object.
    *
    * @note This method, if used, finalizes the task sequence. Althought it is
    *   technically possible to use @ref then() on the task returned by this
@@ -692,7 +692,7 @@ template <typename Result> class task
    * likely before the first task commences its execution.
    *
    * @warning This method invalidates the task object. No operations on the task
-   *  object, except its destruction, are possible after this method returns.
+   *   object, except its destruction, are possible after this method returns.
    */
   void run()
   {
@@ -1034,9 +1034,9 @@ class group
    * @param args   A list of zero or more parameters to pass to the task when
    *               called.
    * @note
-   * Due to incorrect handling of empty parameter packs for variadic templates,
-   * the Callable object may not accept parameters when used in Microsoft
-   * Visual Studio 2013.
+   *   Due to incorrect handling of empty parameter packs for variadic templates,
+   *   the Callable object may not accept parameters when used in Microsoft
+   *   Visual Studio 2013.
    */
 #if defined(INCORRECT_VARIADIC)
   template <typename Function>
@@ -1067,11 +1067,11 @@ class group
    * running or are scheduled to run the handler is called immediatelly.
    *
    * @note The handler is called in the context of @ref cool::gcd::task::runner::cool_default()
-   * "global library runner".
+   *   "global library runner".
    * @note The handler is called only once. If new tasks are added after the
-   *  handler was called the application must set a new handler. Setting
-   *  multiple handlers before all tasks in the group complete will result
-   *  in calling all handlers after the last task completes.
+   *   handler was called the application must set a new handler. Setting
+   *   multiple handlers before all tasks in the group complete will result
+   *   in calling all handlers after the last task completes.
    */
   dlldecl void then(const handler_t& handler);
 
