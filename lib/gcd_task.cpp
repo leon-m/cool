@@ -229,7 +229,7 @@ group::group()
 {
   auto g = ::dispatch_group_create();
   if (g == NULL)
-    throw exception::create_failure("Failed to greate task group");
+    throw exception::create_failure("Failed to create task group");
 
   m_group = g;
 }

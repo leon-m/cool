@@ -306,7 +306,7 @@ template <std::size_t Size> class binary
   void set(int start, uint8_t const data[])
   {
     if (start >= Size)
-      throw exception::out_of_range("copy request out of bounds");
+      throw exception::out_of_range("Copy request out of bounds");
     int n = Size - start;
     ::memcpy(&m_data[start], data, n);
   }
@@ -325,7 +325,7 @@ template <std::size_t Size> class binary
   void set(int start, uint8_t const data[], int size)
   {
     if (start >= Size)
-      throw exception::out_of_range("copy request out of bounds");
+      throw exception::out_of_range("Copy request out of bounds");
 
     int n = Size - start;
     if (n > size)

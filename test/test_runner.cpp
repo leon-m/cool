@@ -476,7 +476,7 @@ void t00008()
           try { std::rethrow_exception(e); }
           catch (const std::exception& ee) { std::cout << "00008 - 9 caught exception: " << ee.what() << "\n"; }
         }
-      , [n] (int a) -> int { std::cout << "00008 - nineth task: " << n << "\n"; return n; }
+      , [n] (int a) -> int { std::cout << "00008 - ninth task: " << n << "\n"; return n; }
     ).run();
 }
 #endif

@@ -145,7 +145,7 @@ class async_source_ref_base
   async_source_ref_base(const dispatch_source_t& src, const Handler& cb)
   {
     if (src == NULL)
-      throw exception::create_failure("failed to create asynchronous event source");
+      throw exception::create_failure("Failed to create asynchronous event source");
 
     m_source = new source_data_t(src, cb);
     ::dispatch_set_context(src, m_source);
