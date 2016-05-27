@@ -97,12 +97,13 @@ message ("-- Build documentation: ${COOL_BUILD_DOC}")
 
 # set output variables
 if (OSX)
-  set (COOL_LIBS cool)
+  set (COOL_LINK_LIBRARIES)
 elseif(LINUX)
-  set (COOL_LIBS cool dispatch pthread)
+  set (COOL_LINK_LIBRARIES dispatch pthread)
 else()
-  set (COOL_LIBS cool dispatch)
+  set (COOL_LINK_LIBRARIES dispatch)
 endif()
+set (COOL_LIBS ${COOL_LIBRARY_NAME} ${COOL_LINK_LIBRARIES})
 
 get_directory_property(hasParent PARENT_DIRECTORY)
 if (hasParent)
@@ -181,9 +182,7 @@ else()
   set_target_properties(${COOL_LIBRARY_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${COOL_LIBRARY_DIR})
 endif()
 
-if (WIN32)
-   target_link_libraries(${COOL_LIBRARY_NAME} dispatch)
-endif()
+target_link_libraries(${COOL_LIBRARY_NAME} ${COOL_LINK_LIBRARIES})
 
 # --- Tests
 set (TESTS
@@ -243,4 +242,3 @@ if (COOL_BUILD_TEST)
 
 
 endif()
-
