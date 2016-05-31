@@ -572,7 +572,7 @@ private:
    *
    * @note Upon creating the timer is inactive and must explicitly be activated
    *   via start().
-   * @note The leeway is the hint form the application code up to which the system
+   * @note The leeway is the hint from the application code up to which the system
    *   can defer the timer to align with other system activity and performance.
    *   Depending on the overall load the system may be forced to exceed the leeway.
    * @note The name of the timer object is prefixed with string <tt>timer-</tt>.
@@ -604,7 +604,7 @@ private:
    *
    * @note Upon creating the timer is inactive and must explicitly be activated
    *   via start().
-   * @note The leeway is the hint form the application code up to which the system
+   * @note The leeway is the hint from the application code up to which the system
    *   can defer the timer to align with other system activity and performance.
    *   Depending on the overall load the system may be forced to exceed the leeway.
    */
@@ -670,7 +670,7 @@ private:
    *
    * @note Upon creating the timer is inactive and must explicitly be activated
    *   via start().
-   * @note The leeway is the hint form the application code up to which the system
+   * @note The leeway is the hint from the application code up to which the system
    *   can defer the timer to align with other system activity and performance.
    *   Depending on the overall load the system may be forced to exceed the leeway.
    * @note The name of the timer object is prefixed with string <tt>timer-</tt>.
@@ -703,7 +703,7 @@ private:
    *
    * @note Upon creating the timer is inactive and must explicitly be activated
    *   via start().
-   * @note The leeway is the hint form the application code up to which the system
+   * @note The leeway is the hint from the application code up to which the system
    *   can defer the timer to align with other system activity and performance.
    *   Depending on the overall load the system may be forced to exceed the leeway.
    * @note The leeway parameter is optional. If not specified it is set to 1% of
