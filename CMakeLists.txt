@@ -103,11 +103,11 @@ message ("-- Build documentation: ${COOL_BUILD_DOC}")
 
 # set output variables
 if (OSX)
-  set (COOL_LIBS ${COOL_LIBRARY_NAME})
+  set (COOL_LINK_LIBRARIES)
 elseif(LINUX)
-  set (COOL_LIBS ${COOL_LIBRARY_NAME} dispatch pthread)
+  set (COOL_LINK_LIBRARIES dispatch pthread)
 else()
-  set (COOL_LIBS ${COOL_LIBRARY_NAME} dispatch)
+  set (COOL_LINK_LIBRARIES dispatch)
 endif()
 set (COOL_LIBS ${COOL_LIBRARY_NAME} ${COOL_LINK_LIBRARIES})
 
