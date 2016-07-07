@@ -29,6 +29,8 @@
 
 #include <dispatch/dispatch.h>
 
+#include "traits.h"
+
 namespace cool { namespace gcd { namespace task {
 
 #if defined(LINUX_TARGET)
@@ -472,6 +474,43 @@ on_any_exception(const std::weak_ptr<runner>& runner_, std::function<Result(cons
 
   return aux;
 }
+
+template <typename Result, typename Exception>
+entrails::taskinfo*
+on_exception(const std::weak_ptr<runner>& runner_, std::function<Result(Exception)>&& err_)
+{
+  using subtask_t = std::function<entrails::task_t*(const std::exception_ptr&)>;
+  using handler_t = std::function<Result(const std::exception_ptr&)>;
+  using exception_t = typename std::decay<Exception>::type;
+
+  entrails::taskinfo* aux = new entrails::taskinfo(runner_);
+  aux->m_is_on_exception = true;
+
+  handler_t err_tc = [err_](const std::exception_ptr& p_ex)
+  {
+    try {
+      std::rethrow_exception(p_ex);
+    }
+    catch (const exception_t& ex) {
+      // catch the exception that err_ handles. Other exception types are not caught
+      // therefore other tasks that follow this one will get a chance to handle them.
+      return err_(ex);
+    }
+  };
+
+  aux->m_u.subtask = new subtask_t(std::bind(
+          entrails::subtask_binder<const std::exception_ptr&, Result, handler_t
+        >::rebind
+        , aux
+        , std::placeholders::_1
+        , err_tc
+  ));
+
+  aux->m_deleter = std::bind(entrails::subtask_deleter<subtask_t>, aux->m_u.subtask);
+
+  return aux;
+}
+
 
 struct queue
 {

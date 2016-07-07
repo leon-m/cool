@@ -624,6 +624,14 @@ template <typename Result> class task
   }
 
   task<Result>
+  on_any_exception(std::function<Result(const std::exception_ptr&)>&& err_)
+  {
+    if (m_info == nullptr)
+      throw cool::exception::illegal_state("this task object is in undefined state");
+    return on_any_exception(m_info->m_runner, std::forward<std::function<Result(const std::exception_ptr&)>>(err_));
+  }
+
+  task<Result>
   on_any_exception(const std::weak_ptr<runner>& runner_, std::function<Result(const std::exception_ptr&)>&& err_)
   {
     if (m_info == nullptr)
@@ -631,6 +639,48 @@ template <typename Result> class task
 
     entrails::taskinfo* aux = entrails::on_any_exception<Result>(runner_, std::forward<std::function<Result(const std::exception_ptr&)>>(err_));
     m_info->m_next = aux;  // double link
+    aux->m_prev = m_info;
+    m_info = nullptr;     // invalidate state of current task
+
+    return task<Result>(aux);
+  }
+
+  template <typename Function>
+  task<Result>
+  on_exception(Function&& err_)
+  {
+    static_assert(
+        std::is_same<typename traits::info<Function>::result, Result>::value,
+        "Return type of on_exception handler must be the same as preceding task.");
+
+    static_assert(
+        std::is_same<typename traits::info<Function>::has_one_arg, std::true_type>::value,
+        "on_exception handler must have exactly one parameter.");
+
+    if (m_info == nullptr)
+      throw cool::exception::illegal_state("this task object is in undefined state");
+    return on_exception(m_info->m_runner, std::forward<Function>(err_));
+  }
+
+  template <typename Function>
+  task<Result>
+  on_exception(const std::weak_ptr<runner>& runner_, Function&& err_)
+  {
+    static_assert(
+        std::is_same<typename traits::info<Function>::result, Result>::value,
+        "Return type of on_exception handler must be the same as preceding task.");
+
+    static_assert(
+        std::is_same<typename traits::info<Function>::has_one_arg, std::true_type>::value,
+        "on_exception handler must have exactly one parameter.");
+
+    if (m_info == nullptr)
+      throw cool::exception::illegal_state("this task object is in undefined state");
+
+    using exception_t = typename std::decay<typename traits::info<Function>::first_arg>::type;
+
+    entrails::taskinfo* aux = entrails::on_exception<Result, exception_t>(runner_, std::forward<Function>(err_));
+    m_info->m_next = aux; // double link
     aux->m_prev = m_info;
     m_info = nullptr;     // invalidate state of current task
 
@@ -861,6 +911,14 @@ template <> class task<void>
 
 
   task
+  on_any_exception(std::function<void(const std::exception_ptr&)>&& err_)
+  {
+    if (m_info == nullptr)
+      throw cool::exception::illegal_state("this task object is in undefined state");
+    return on_any_exception(m_info->m_runner, std::forward<std::function<void(const std::exception_ptr&)>>(err_));
+  }
+
+  task
   on_any_exception(const std::weak_ptr<runner>& runner_, error_handler_t&& err_)
   {
     if (m_info == nullptr)
@@ -868,6 +926,48 @@ template <> class task<void>
 
     entrails::taskinfo* aux = entrails::on_any_exception<void>(runner_, std::forward<error_handler_t>(err_));
     m_info->m_next = aux;  // double link
+    aux->m_prev = m_info;
+    m_info = nullptr;     // invalidate state of current task
+
+    return task(aux);
+  }
+
+  template <typename Function>
+  task
+  on_exception(Function&& err_)
+  {
+    static_assert(
+        std::is_same<typename traits::info<Function>::result, void>::value,
+        "Return type of on_exception handler must be the same as preceding task.");
+
+    static_assert(
+        std::is_same<typename traits::info<Function>::has_one_arg, std::true_type>::value,
+        "on_exception handler must have exactly one parameter.");
+
+    if (m_info == nullptr)
+      throw cool::exception::illegal_state("this task object is in undefined state");
+    return on_exception(m_info->m_runner, std::forward<Function>(err_));
+  }
+
+  template <typename Function>
+  task
+  on_exception(const std::weak_ptr<runner>& runner_, Function&& err_)
+  {
+    static_assert(
+        std::is_same<typename traits::info<Function>::result, void>::value,
+        "Return type of on_exception handler must be the same as preceding task.");
+
+    static_assert(
+        std::is_same<typename traits::info<Function>::has_one_arg, std::true_type>::value,
+        "on_exception handler must have exactly one parameter.");
+
+    if (m_info == nullptr)
+      throw cool::exception::illegal_state("this task object is in undefined state");
+
+    using exception_t = typename std::decay<typename traits::info<Function>::first_arg>::type;
+
+    entrails::taskinfo* aux = entrails::on_exception<void, exception_t>(runner_, std::forward<Function>(err_));
+    m_info->m_next = aux; // double link
     aux->m_prev = m_info;
     m_info = nullptr;     // invalidate state of current task
 
