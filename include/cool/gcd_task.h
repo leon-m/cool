@@ -622,7 +622,21 @@ template <typename Result> class task
     
     return task<subtask_result_t>(aux);
   }
-  
+
+  task<Result>
+  on_any_exception(const std::weak_ptr<runner>& runner_, std::function<Result(const std::exception_ptr&)>&& err_)
+  {
+    if (m_info == nullptr)
+      throw cool::exception::illegal_state("this task object is in undefined state");
+
+    entrails::taskinfo* aux = entrails::on_any_exception<Result>(runner_, std::forward<std::function<Result(const std::exception_ptr&)>>(err_));
+    m_info->m_next = aux;  // double link
+    aux->m_prev = m_info;
+    m_info = nullptr;     // invalidate state of current task
+
+    return task<Result>(aux);
+  }
+
   /**
    * Specifies the error handling task for the current task.
    *
@@ -845,6 +859,20 @@ template <> class task<void>
   
   }
 
+
+  task
+  on_any_exception(const std::weak_ptr<runner>& runner_, error_handler_t&& err_)
+  {
+    if (m_info == nullptr)
+      throw cool::exception::illegal_state("this task object is in undefined state");
+
+    entrails::taskinfo* aux = entrails::on_any_exception<void>(runner_, std::forward<error_handler_t>(err_));
+    m_info->m_next = aux;  // double link
+    aux->m_prev = m_info;
+    m_info = nullptr;     // invalidate state of current task
+
+    return task(aux);
+  }
 
   task finally(const error_handler_t& err_)
   {

@@ -197,6 +197,7 @@ target_link_libraries(${COOL_LIBRARY_NAME} ${COOL_LINK_LIBRARIES})
 # --- Tests
 set (TESTS
    runner
+   on_exception
 )
 
 # --- Doxygen documentation
