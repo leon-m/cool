@@ -588,6 +588,49 @@ template <typename Result> class task
   then(const std::weak_ptr<runner>& runner_, const error_handler_t &err_, Function &&func_, Args&&... args_)
 #endif
   {
+    if (m_info == nullptr)
+      throw cool::exception::illegal_state("this task object is in undefined state");
+
+    auto task = then_do(runner_, std::forward<Function>(func_)
+#if !defined(INCORRECT_VARIADIC)
+        , std::forward<Args>(args_)...
+#endif
+    );
+
+    task.m_info->m_eh = err_;
+
+    return task;
+  }
+
+#if defined(INCORRECT_VARIADIC)
+  template <typename Function>
+  task<typename std::result_of<Function(const Result&)>::type>
+  then_do(Function &&func_)
+#else
+  template <typename Function, typename... Args>
+  task<typename std::result_of<Function(const Result&, Args...)>::type>
+  then_do(Function &&func_, Args&&... args_)
+#endif
+  {
+    if (m_info == nullptr)
+      throw cool::exception::illegal_state("this task object is in undefined state");
+    return then_do(m_info->m_runner, std::forward<Function>(func_)
+#if !defined(INCORRECT_VARIADIC)
+        , std::forward<Args>(args_)...
+#endif
+    );
+  }
+
+#if defined(INCORRECT_VARIADIC)
+  template <typename Function>
+  task<typename std::result_of<Function(const Result&)>::type>
+  then_do(const std::weak_ptr<runner>& runner_, Function &&func_)
+#else
+  template <typename Function, typename... Args>
+  task<typename std::result_of<Function(const Result&, Args...)>::type>
+  then_do(const std::weak_ptr<runner>& runner_, Function &&func_, Args&&... args_)
+#endif
+  {
 #if defined(INCORRECT_VARIADIC)
     using subtask_result_t = typename std::result_of<Function(const Result&)>::type;
 #else
@@ -599,7 +642,6 @@ template <typename Result> class task
       throw cool::exception::illegal_state("this task object is in undefined state");
 
     entrails::taskinfo* aux = new entrails::taskinfo(runner_);
-    aux->m_eh = err_;
     m_info->m_next = aux;  // double link
     aux->m_prev = m_info;
 
@@ -874,6 +916,49 @@ template <> class task<void>
   then(const std::weak_ptr<runner>& runner_, const error_handler_t& err_, Function&& func_, Args&&... args_)
 #endif
   {
+    if (m_info == nullptr)
+      throw cool::exception::illegal_state("this task object is in undefined state");
+
+    auto task = then_do(runner_, std::forward<Function>(func_)
+#if !defined(INCORRECT_VARIADIC)
+        , std::forward<Args>(args_)...
+#endif
+    );
+
+    task.m_info->m_eh = err_;
+
+    return task;
+  }
+
+#if defined(INCORRECT_VARIADIC)
+  template <typename Function>
+  task<typename std::result_of<Function()>::type>
+  then_do(Function&& func_)
+#else
+  template <typename Function, typename... Args >
+  task<typename std::result_of<Function(Args...)>::type>
+  then_do(Function&& func_, Args&&... args_)
+#endif
+  {
+    if (m_info == nullptr)
+      throw cool::exception::illegal_state("this task object is in undefined state");
+    return then_do(m_info->m_runner, std::forward<Function>(func_)
+#if !defined(INCORRECT_VARIADIC)
+        , std::forward<Args>(args_)...
+#endif
+    );
+  }
+
+#if defined(INCORRECT_VARIADIC)
+  template <typename Function>
+  task<typename std::result_of<Function()>::type>
+  then_do(const std::weak_ptr<runner>& runner_, Function&& func_)
+#else
+  template <typename Function, typename... Args >
+  task<typename std::result_of<Function(Args...)>::type>
+  then_do(const std::weak_ptr<runner>& runner_, Function&& func_, Args&&... args_)
+#endif
+  {
 #if defined(INCORRECT_VARIADIC)
     using subtask_result_t = typename std::result_of<Function()>::type;
 #else
@@ -885,7 +970,6 @@ template <> class task<void>
       throw cool::exception::illegal_state("this task object is in undefined state");
 
     entrails::taskinfo* aux = new entrails::taskinfo(runner_);
-    aux->m_eh = err_;
     m_info->m_next = aux;  // double link
     aux->m_prev = m_info;
 

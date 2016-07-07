@@ -38,9 +38,15 @@ TEST(on_exception, error_handling_tasks)
   bool ok = false;
 
   auto&& task = cool::gcd::task::factory::create(r,
+      [](){ }).
+  then(
+      r,
+      [](const std::exception_ptr& ex){
+        FAIL() << "Should not get here. No error";
+      },
       [](){
-        std::cout << "task 1 throwing" << std::endl;
-        throw std::range_error("TestError");
+        std::cout << "task throwing" << std::endl;
+        throw std::range_error("");
       }).
   then(
       [&mutexWait, &cvWait, &ok](const std::exception_ptr& ex){
@@ -81,10 +87,10 @@ TEST(on_exception, on_any_exception_void)
         std::cout << "task 1 throwing" << std::endl;
         throw std::range_error("TestError");
       }).
-//  then(
-//      [](){
-//        std::cout << "You should not see this. This task is skipped." << std::endl;
-//      }).
+  then_do(
+      [](){
+        FAIL() << "You should not see this. This task is skipped.";
+      }).
   on_any_exception(r,
       [](const std::exception_ptr& ex_ptr){
         try {
@@ -125,10 +131,10 @@ TEST(on_exception, on_any_exception_typed)
         std::cout << "task 1 throwing" << std::endl;
         throw std::range_error("TestError");
       }).
-//  then(
-//      [](){
-//        std::cout << "You should not see this. This task is skipped." << std::endl;
-//      }).
+  then_do(
+      [](const std::string&)->std::string{
+        ADD_FAILURE(); return""; //This task should be skipped
+      }).
   on_any_exception(r,
       [](const std::exception_ptr& ex_ptr)->std::string{
         try {
@@ -205,10 +211,10 @@ TEST(on_exception, on_exception_void)
         std::cout << "task 1 throwing" << std::endl;
         throw std::range_error("TestError");
       }).
-//  then(
-//      [](){
-//        std::cout << "You should not see this. This task is skipped." << std::endl;
-//      }).
+  then_do(
+      [](){
+        ADD_FAILURE(); //This task should be skipped
+      }).
   on_exception(r,
       [](const std::range_error& ex){
         std::cout << __LINE__ << " handling: " << ex.what() << std::endl;
@@ -245,10 +251,10 @@ TEST(on_exception, on_exception_typed)
         std::cout << "task 1 throwing" << std::endl;
         throw std::range_error("TestError");
       }).
-//  then(
-//      [](){
-//        std::cout << "You should not see this. This task is skipped." << std::endl;
-//      }).
+  then_do(
+      [](const std::string&)->std::string{
+        ADD_FAILURE(); return ""; //This task should be skipped
+      }).
   on_exception(r,
       [](const std::range_error& ex)->std::string{
         std::cout << __LINE__ << " handling: " << ex.what() << std::endl;
@@ -378,18 +384,16 @@ TEST(on_exception, task_chain)
 
   cool::gcd::task::factory::create(r,
       []()->int{
-        //throw std::runtime_error("Test error");
-        throw std::range_error("Can't do.");
+        throw std::range_error("Test error");
       }).
-//  then(
-//      [](std::string result)->std::string{
-//        std::cout << "You should not see this. This task is skipped." << std::endl;
-//        return "Oops" + result;
-//      }).
+  then_do(
+      [](int)->int{
+        ADD_FAILURE(); return 34; //This task should be skipped
+      }).
   on_exception(r,
       [](const std::underflow_error& ex) {
         std::cout << "Should not get here. Incorrect exception type";
-        return -__LINE__;
+        ADD_FAILURE(); return -__LINE__;
       }).
   on_exception(r,
       [](const std::range_error& ex) {
@@ -399,18 +403,17 @@ TEST(on_exception, task_chain)
   on_exception(r,
       [](const std::runtime_error& ex) {
         std::cout << "Should not get here.";
-        return -__LINE__;
+        ADD_FAILURE(); return -__LINE__;
       }).
   on_any_exception(r,
       [](const std::exception_ptr& ex_ptr) {
         std::cout << "Should not get here.";
-        return -__LINE__;
+        ADD_FAILURE(); return -__LINE__;
       }).
-//  then(
-//      [](const std::string& result){
-//        std::cout << "Result: " << result << std::endl;
-//        return 0;
-//      }).
+  then_do(
+      [](const int&i)->int{
+        return i;
+      }).
   then(
       [](const std::exception_ptr& ex){
         FAIL() << "Should not get here";
@@ -422,7 +425,7 @@ TEST(on_exception, task_chain)
       }).
   finally(
       [](const std::exception_ptr&){
-        std::cerr << "Bad things happened" << std::endl;
+        FAIL() << "Should not get here";
       }).
   run();
 
@@ -430,6 +433,101 @@ TEST(on_exception, task_chain)
   cvWait.wait(l);
 
   ASSERT_EQ(57, result);
+}
+
+
+// Test variants of then tasks returning void
+TEST(then, then_void_variants)
+{
+  auto&& r = std::make_shared<cool::gcd::task::runner>();
+
+  std::mutex mutexWait;
+  std::condition_variable cvWait;
+  int n = 0;
+
+  int i = -1;
+  auto&& task = cool::gcd::task::factory::create(r,
+      [](){})
+
+  // tasks under test
+#if !defined(INCORRECT_VARIADIC)
+  .then_do(r,                                           [&n](int){ ++n; }, i)
+  .then_do(                                             [&n](int){ ++n; }, i)
+  .then   (r, [](const std::exception_ptr&){ FAIL(); }, [&n](int){ ++n; }, i)
+  .then   (   [](const std::exception_ptr&){ FAIL(); }, [&n](int){ ++n; }, i)
+#endif
+  .then_do(r,                                           [&n](){ ++n; })
+  .then_do(                                             [&n](){ ++n; })
+  .then(   r, [](const std::exception_ptr&){ FAIL();},  [&n](){ ++n; })
+  .then(      [](const std::exception_ptr&){ FAIL();},  [&n](){ ++n; })
+  // end of tested tasks
+
+  .then(
+      [](const std::exception_ptr&){ FAIL();},
+      [&mutexWait, &cvWait](){
+        std::unique_lock<std::mutex> l(mutexWait);
+        cvWait.notify_one();
+      })
+  ;
+
+  task.run();
+
+  std::unique_lock<std::mutex> l(mutexWait);
+  cvWait.wait(l);
+
+#if !defined(INCORRECT_VARIADIC)
+  ASSERT_EQ(8, n);
+#else
+  ASSERT_EQ(4, n);
+#endif
+}
+
+
+// Test variants of then tasks returning result
+TEST(then, then_typed_variants)
+{
+  auto&& r = std::make_shared<cool::gcd::task::runner>();
+
+  std::mutex mutexWait;
+  std::condition_variable cvWait;
+
+  int result = 0;
+  int i = 1;
+  auto&& task = cool::gcd::task::factory::create(r,
+      [](){ return 0; })
+
+  // tasks under test
+#if !defined(INCORRECT_VARIADIC)
+  .then_do(r,                                           [](int r, int p){ return r+p; }, i)
+  .then_do(                                             [](int r, int p){ return r+p; }, i)
+  .then   (r, [](const std::exception_ptr&){ FAIL(); }, [](int r, int p){ return r+p; }, i)
+  .then   (   [](const std::exception_ptr&){ FAIL(); }, [](int r, int p){ return r+p; }, i)
+#endif
+  .then_do(r,                                           [](int r){ return ++r; })
+  .then_do(                                             [](int r){ return ++r; })
+  .then(   r, [](const std::exception_ptr&){ FAIL();},  [](int r){ return ++r; })
+  .then(      [](const std::exception_ptr&){ FAIL();},  [](int r){ return ++r; })
+  // end of tested tasks
+
+  .then(
+      [](const std::exception_ptr&){ FAIL();},
+      [&result, &mutexWait, &cvWait](int r){
+        result = r;
+        std::unique_lock<std::mutex> l(mutexWait);
+        cvWait.notify_one();
+      })
+  ;
+
+  task.run();
+
+  std::unique_lock<std::mutex> l(mutexWait);
+  cvWait.wait(l);
+
+#if !defined(INCORRECT_VARIADIC)
+  ASSERT_EQ(8, result);
+#else
+  ASSERT_EQ(4, result);
+#endif
 }
 
 
