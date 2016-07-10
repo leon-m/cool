@@ -40,7 +40,7 @@ namespace cu = CppUnit;
 int main(int argc, char **argv)
 {
   cu::TestResult testresult;
-  
+
   // register listener for collecting the test-results
   cu::TestResultCollector collectedresults;
   testresult.addListener (&collectedresults);
@@ -61,7 +61,7 @@ int main(int argc, char **argv)
 
   cu::TextOutputter outputter(&collectedresults, std::cerr);
   outputter.write ();
-  
+
 //  outputter.printHeader();
 //  outputter.printStatistics();
 //  outputter.printFailures();

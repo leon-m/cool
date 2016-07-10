@@ -78,7 +78,7 @@ class runner_not_available : public cool::exception::runtime_exception
       : runtime_exception("the destination runner not available")
   { /* noop */ }
 };
-    
+
 /**
  * A class representing the queue of asynchronously executing tasks.
  *
@@ -98,8 +98,8 @@ class runner_not_available : public cool::exception::runtime_exception
  * to either be notified about, or to collect the result of each task.
  *
  * @note The runner objects normally represent independent task queues. However,
- *  the runner objects created using copy construction or copy assignment
- *  operator are considered clones and represent the same task queue.
+ *   the runner objects created using copy construction or copy assignment
+ *   operator are considered clones and represent the same task queue.
  *
  * <b>Thread Safety</b><br>
  * Although the main use model is not multi-thread scenario, the runner objects
@@ -125,15 +125,15 @@ class runner : public named
    *     FIFO order, but the order of their completion is not defined. The tasks
    *     may or may not be executed by multiple threads.
    *
-   * @param run_order DISPATCH_QUEUE_SERIAL for sequential task exection or
-   *    DISPATCH_QUEUE_CONCURRENT for concurrent exection. The defaul value
+   * @param run_order DISPATCH_QUEUE_SERIAL for sequential task execution or
+   *    DISPATCH_QUEUE_CONCURRENT for concurrent execution. The default value
    *    is DISPATCH_QUEUE_SERIAL
    *
    * @exception cool::exception::create_failure thrown if a new instance cannot
-   *    be created.
+   *   be created.
    *
-   * @note The runner object is created in started state and is immediatelly
-   *    capable of executing tasks.
+   * @note The runner object is created in started state and is immediately
+   *   capable of executing tasks.
    *
    * <b>Portability</b><br>
    * This constructor is only available on OS/X operating system. Only the
@@ -153,9 +153,9 @@ class runner : public named
    * Destroys the runner object.
    *
    * @note Note that before being destroyed the stopped runner is restarted. The
-   *    execution of all tasks waiting in the runner's queue will continue even
-   *    after the runner object destruction and will cease only after the completion
-   *    of the last task.
+   *   execution of all tasks waiting in the runner's queue will continue even
+   *   after the runner object destruction and will cease only after the completion
+   *   of the last task.
    */
   dlldecl ~runner();
   /**
@@ -196,24 +196,24 @@ class runner : public named
    * @param task Callable object to be executed
    * @param args A list of zero or more parameters to be passed to the Callable
    *             object when it starts executing.
-   * @return cool::basis::aim object of the type instantitated with the type of
-   *     the return value of the Callable object, or void if there is no 
+   * @return cool::basis::aim object of the type instantiated with the type of
+   *     the return value of the Callable object, or void if there is no
    *     return value.
    * @exception cool::exception::illegal_state thrown if this runner was closed.
    *
    * @warning
-   * The cool::basis::aim object returned by this method is meant for thread
-   * synchronization in multi-threading programming model. As such it refers
-   * to a shared state which is shared with the associated cool::basis::vow.
-   * The shared state is guarded by internal @c std::mutex. The thread
-   * safety may incurr an unnecessary overhead in pure asynchronous programming
-   * model. When multi-thread synchronization is not the issue, use
-   * @ref cool::gcd::task::task "task" approach instead.
+   *   The cool::basis::aim object returned by this method is meant for thread
+   *   synchronization in multi-threading programming model. As such it refers
+   *   to a shared state which is shared with the associated cool::basis::vow.
+   *   The shared state is guarded by internal @c std::mutex. The thread
+   *   safety may incur an unnecessary overhead in pure asynchronous programming
+   *   model. When multi-thread synchronization is not an issue, use
+   *   @ref cool::gcd::task::task "task" approach instead.
    *
    * @note
-   * Due to incorrect handling of empty parameter packs for variadic templates,
-   * the Callable object may not accept parameters when used in Microsoft
-   * Visual Studio 2013.
+   *   Due to incorrect handling of empty parameter packs for variadic templates,
+   *   the Callable object may not accept parameters when used in Microsoft
+   *   Visual Studio 2013.
    */
 #if defined(INCORRECT_VARIADIC)
   template <typename Function>
@@ -245,10 +245,10 @@ class runner : public named
   {
     if (!m_active)
       throw cool::exception::illegal_state("this runner is closed");
-    
+
     vow<typename std::result_of<Function(Args...)>::type> v;
     auto a = v.get_aim();
-    
+
     void *ctx = static_cast<void*>(
             entrails::binder<
                 std::is_same<typename std::result_of<Function(Args...)>::type, void>::value
@@ -259,9 +259,9 @@ class runner : public named
               , std::forward<Function>(task)
               , std::forward<Args>(args)...)
     );
-    
+
     ::dispatch_async_f(m_data->m_queue, ctx, entrails::executor);
-    
+
     return a;
   }
 #endif
@@ -324,18 +324,18 @@ class runner : public named
   dlldecl static std::shared_ptr<runner> sys_background_ptr();
 #endif
   /**
-   * Returns library defauly runner.
+   * Returns library default runner.
    *
    * @note This runner executes tasks sequentially.
    */
   dlldecl static const runner& cool_default();
   /**
-   * Returns library defauly runner.
+   * Returns library default runner.
    *
    * @note This runner executes tasks sequentially.
    */
   dlldecl static std::shared_ptr<runner> cool_default_ptr();
-  
+
  private:
   friend class cool::gcd::async::timer;
   friend class cool::gcd::async::data_observer;
@@ -351,82 +351,82 @@ class runner : public named
   friend class group;
   operator const dispatch_queue_t() const { return m_data->m_queue; }
   operator dispatch_queue_t () { return m_data->m_queue; }
-  
+
   friend void entrails::kickstart(entrails::taskinfo*);
   void task_run(entrails::taskinfo* info_);
   friend void entrails::kickstart(entrails::taskinfo* info_, const std::exception_ptr& e_);
   void task_run(entrails::task_t* task_);
-  
+
  protected:
   dlldecl runner(const std::string& name, dispatch_queue_priority_t priority);
-  
+
  private:
   bool                             m_active;
   std::shared_ptr<entrails::queue> m_data;
 };
 
 /**
- * A class representing the task, or a sequence of tasks, to be synchronouly
+ * A class representing the task, or a sequence of tasks, to be synchronously
  * executed in one or more task queues.
  *
  * The task interface represents an alternative to the runner::run() method which
  * is more suitable for the asynchronous processing model. While both models
- * provide the means for sequential execution of tasks, and tranfering the
+ * provide the means for sequential execution of tasks and transferring the
  * results (return values) of preceding task to the next task, the task
  * interface provides the following advantages over the runner::run() method:
  *
- * - the runner::run() produced an pair of @ref cool::basis::aim "aim"/@ref cool::basis::vow "vow"
- *   objects for each tun task. In additon, sequencing the tasks via one of
+ * - the runner::run() produced a pair of @ref cool::basis::aim "aim"/@ref cool::basis::vow "vow"
+ *   objects for each tun task. In addition, sequencing the tasks via one of
  *   @ref cool::basis::aim::then() "aim::then()" methods produced another pair for each task
  *   added to the sequence. And since these objects were primarily designed to
  *   support multi-threading model, each such pair shares a shared state guarded
  *   by std::mutex, which unnecessarily slows down the asynchronous processing.
- * - the @ref cool::basis::aim "aim" offerend no guaranties about which 
+ * - the @ref cool::basis::aim "aim" offered no guaranties about which
  *   @ref cool::gcd::task::runner "runner" will execute the tasks supplied via
  *   @ref cool::basis::aim::then() "aim::then()" method. Depending on
- *   the availaility of the results it could have been the runner executing the
+ *   the availability of the results it could have been the runner executing the
  *   first task, or the runner calling runner::run method. The task interface
- *   not only guaranties which runner will execute the next task in the
- *   sequence but also lets the user code to select a different runner than
+ *   not only guarantees which runner will execute the next task in the
+ *   sequence but also allows the user code to select a different runner than
  *   the default.
  *
- * The task objects are not copiable but are moveable. They cannot be constructed
+ * The task objects are not copyable but are movable. They cannot be constructed
  * directly but are created either by @ref cool::gcd::task::factory "task factory"
  * or by one of the task::then() method templates.
  *
- * @exception cool::gcd::task::runner_not_available thrown if, when the asks are
- *  to be submitted for execution to theire respective
- *  @ref cool::gcd::task::runner "runner" task queues, the destination runner
- *  not longer exists. In this case, the task library will throw this exception,
- *  which will be passed to the error handler provided throguh one of the 
- *  @ref task::then() "then()" methods. Note however, than if the error handler
- *  was to be run on the same runner that is no longer available, the error
- *  handler will not be scheduled to run and this exception will disappear
- *  unnoticed. This exception is thrown during the task sequence execution and is
- *  asynchronous with regard to the code that constructed and manipulated the
- *  task object(s).
+ * @exception cool::gcd::task::runner_not_available thrown when the tasks are
+ *   to be submitted for execution to their respective
+ *   @ref cool::gcd::task::runner "runner" task queues, but the destination runner
+ *   no longer exists. In this case, the task library will throw this exception,
+ *   which will be passed to the error handler provided through one of the
+ *   @ref task::then() "then()" methods. Note however, that if the error handler
+ *   was to be run on the same runner that is no longer available, the error
+ *   handler will not be scheduled to run and this exception will disappear
+ *   unnoticed. This exception is thrown during the task sequence execution and is
+ *   asynchronous with regard to the code that constructed and manipulated the
+ *   task object(s).
  *
  * @exception cool::exception::illegal_state thrown immediately by task methods
- *  if the task object on which the methods was tried is no longer valid. This
- *  exception is synchronous with regard to the caller of the method.
+ *   if the task object on which the method was tried is no longer valid. This
+ *   exception is synchronous with regard to the caller of the method.
  *
  *
  * <b>Portability and Limitations</b><br>
  * The task interface is available on Max OS/X using Xcode 7 or later,
- * Linux using gcc 5.0 or later, and Microsoft Windows using 
+ * Linux using gcc 5.0 or later, and Microsoft Windows using
  * Visual Studio 2013 or later.
  *
- * The following are limitations applicable to Microsft Windows:
+ * The following are limitations applicable to Microsoft Windows:
  *
  * 1. when using Visual Studio 2013:
  *   - user Callable objects may not accept parameters, except for error
  *     handlers which must be of @ref error_handler_t compatible type,
- *     and  the mandatory first parameter if preceding task returns value.
+ *     and the mandatory first parameter if preceding task returns value.
  *
  * 2. when using Visual Studio 2015:
  *   - user Callable objects may not accept parameters, except for error
  *     handlers which must be of @ref error_handler_t compatible type,
- *     and  the mandatory first parameter if preceding task returns value.
+ *     and the mandatory first parameter if preceding task returns value.
  */
 template <typename Result> class task
 {
@@ -440,7 +440,7 @@ template <typename Result> class task
   * Return value of this task
   */
   using result_type = Result;
-  
+
  public:
   task()                       = delete;
   task(const task&)            = delete;
@@ -461,7 +461,7 @@ template <typename Result> class task
     if (m_info != nullptr)
       entrails::cleanup_reverse(m_info);
   }
-  
+
   /**
    * Adds a new task to the sequence and returns it.
    *
@@ -474,13 +474,13 @@ template <typename Result> class task
    *    If the return value type of this task is non-void, the Callable's first
    *    argument must be @c const @c ResultT&, where ResultT is the type of the
    *    return value of this task's Callable.
-   * @tparam Args... the template parameter pack of additional argumets passed to
+   * @tparam Args... the template parameter pack of additional arguments passed to
    *    the user supplied Callable, after the optional first argument.
    *
    * The method must be provided with the following parameters:
    * @param err_ the error handler to be called if this task throws an exception
    *    during its execution.
-   * @param func_ the user supplied Callable to be shecduled for execution upon
+   * @param func_ the user supplied Callable to be scheduled for execution upon
    *    the successful completion of this task.
    * @param args_ additional arguments to be passed to the user provided
    *    Callable when it begins the execution. Note that the additional arguments
@@ -488,7 +488,7 @@ template <typename Result> class task
    *    is non-void, or as the first, second, etc. argument if it is void.
    *
    * @return a new task object, which is to be used from this point on instead
-   *    of the current task object.
+   *   of the current task object.
    *
    * If the current task throws an exception during its execution, the task
    * library will schedule an error handler (@c err_) for the execution and will not
@@ -499,8 +499,8 @@ template <typename Result> class task
    * that ran the current task.
    *
    * @note This method invalidates the current (@c this) object, and returns
-   *    a new task object. All further operations must be performed on a new
-   *    object.
+   *   a new task object. All further operations must be performed on a new
+   *   object.
    *
    * @note Note that since all @ref then() methods invalidate the current and
    *   return a new task object, the used runner will the last runner explicitly
@@ -543,7 +543,7 @@ template <typename Result> class task
    *    If the return value type of this task is non-void, the Callable's first
    *    argument must be @c const @c ResultT&, where ResultT is the type of the
    *    return value of this task's Callable.
-   * @tparam Args... the template parameter pack of additional argumets passed to
+   * @tparam Args... the template parameter pack of additional arguments passed to
    *    the user supplied Callable, after the optional first argument.
    *
    * The method must be provided with the following parameters:
@@ -559,7 +559,7 @@ template <typename Result> class task
    *    is non-void, or as the first, second, etc. argument if it is void.
    *
    * @return a new task object, which is to be used from this point on instead
-   *    of the current task object.
+   *   of the current task object.
    *
    * If the current task throws an exception during its execution, the task
    * library will schedule an error handler (@c err_) for the execution and will not
@@ -570,8 +570,8 @@ template <typename Result> class task
    * specified by parameter @c runner_ .
    *
    * @note This method invalidates the current (@c this) object, and returns
-   *    a new task object. All further operations must be performed on a new
-   *    object.
+   *   a new task object. All further operations must be performed on a new
+   *   object.
    *
    * @warning The error handler @c err is scheduled for the execution
    *   if the preceding task threw an exception. Scheduling the error handler
@@ -606,9 +606,9 @@ template <typename Result> class task
     aux->m_u.subtask = new subtask_t(std::bind(
             entrails::subtask_binder<Result, subtask_result_t, Function
 #if !defined(INCORRECT_VARIADIC)
-		    , Args...
+          , Args...
 #endif
-		  >::rebind
+            >::rebind
           , aux
           , std::placeholders::_1
           , std::forward<Function>(func_)
@@ -616,13 +616,13 @@ template <typename Result> class task
           , std::forward<Args>(args_)...
 #endif
     ));
-     
+
     aux->m_deleter = std::bind(entrails::subtask_deleter<subtask_t>, aux->m_u.subtask);
     m_info = nullptr;     // invalidate state of current task
-    
+
     return task<subtask_result_t>(aux);
   }
-  
+
   /**
    * Specifies the error handling task for the current task.
    *
@@ -632,14 +632,14 @@ template <typename Result> class task
    * task.
    *
    * @note This method invalidates the current (@c this) object, and returns
-   *    a new task object. All further operations must be performed on a new
-   *    object.
+   *   a new task object. All further operations must be performed on a new
+   *   object.
    * @note Note that since all @ref then() methods invalidate the current and
    *   return a new task object, the used runner will the last runner explicitly
    *   passed to any preceding task through @ref then(), or the runner specified
    *   at @ref factory::create() if none.
    *
-   * @note This method, if used, finalizes the task sequence. Althought it is
+   * @note This method, if used, finalizes the task sequence. Although it is
    *   technically possible to use @ref then() on the task returned by this
    *   method, this and any subsequent tasks would never get run.
    */
@@ -647,9 +647,9 @@ template <typename Result> class task
   {
     if (m_info == nullptr)
       throw cool::exception::illegal_state("this task object is in undefined state");
-  	return finally(m_info->m_runner, err_);
+    return finally(m_info->m_runner, err_);
   }
-  
+
   /**
    * Specifies the error handling task for the current task.
    *
@@ -658,30 +658,30 @@ template <typename Result> class task
    * handling task is run by the runner specified by @c runner_ parameter.
    *
    * @note This method invalidates the current (@c this) object, and returns
-   *    a new task object. All further operations must be performed on a new
-   *    object.
+   *   a new task object. All further operations must be performed on a new
+   *   object.
    *
-   * @note This method, if used, finalizes the task sequence. Althought it is
-   *   technically possible to use @ref then() on the task returned by this 
+   * @note This method, if used, finalizes the task sequence. Although it is
+   *   technically possible to use @ref then() on the task returned by this
    *   method, this and any subsequent tasks would never get run.
    */
   task finally(const std::weak_ptr<runner>& runner_, const error_handler_t& err_)
   {
     if (m_info == nullptr)
       throw cool::exception::illegal_state("this task object is in undefined state");
-  
+
     entrails::taskinfo* aux = new entrails::taskinfo(runner_);
     m_info->m_next = aux;
-  
+
     aux->m_eh = err_;
     aux->m_prev = m_info;
     m_info = aux;
 
     return task(std::move(*this));
   }
-  
+
   /**
-   * Submits a task, or a sequence of tasks into the @ref cool::gcd::task::runner "runner"'s 
+   * Submits a task, or a sequence of tasks into the @ref cool::gcd::task::runner "runner"'s
    * task queue(s) for execution.
    *
    * This method schedules the execution of the task, or the sequence of tasks
@@ -692,7 +692,7 @@ template <typename Result> class task
    * likely before the first task commences its execution.
    *
    * @warning This method invalidates the task object. No operations on the task
-   *  object, except its destruction, are possible after this method returns.
+   *   object, except its destruction, are possible after this method returns.
    */
   void run()
   {
@@ -701,12 +701,12 @@ template <typename Result> class task
 
     auto ptr = m_info;
     m_info = nullptr;  // prevent double delete
-  
+
     for ( ; ptr->m_prev != nullptr; ptr = ptr->m_prev)
     ;
     entrails::kickstart(ptr);
   }
-  
+
  private:
   friend class factory;
 
@@ -738,7 +738,7 @@ template <typename Result> class task
   template <typename T> friend class task;
   task(entrails::taskinfo* info) : m_info(info)
   { /* noop */ }
-  
+
  private:
   entrails::taskinfo* m_info;
 };
@@ -746,7 +746,7 @@ template <typename Result> class task
 /**
  * Specialization of task class template for @c void Callable objects.
  *
- * This spcializaiton is used for user Callable objects which do not return
+ * This specialization is used for user Callable objects which do not return
  * value. Its methods are the same as those of @ref cool::gcd::task::task "task"
  * class template.
  *
@@ -757,7 +757,7 @@ template <> class task<void>
  public:
   using error_handler_t  = entrails::error_handler_t;
   using result_type      = void;
-  
+
  public:
   task()                       = delete;
   task(const task&)            = delete;
@@ -816,7 +816,7 @@ template <> class task<void>
     using subtask_result_t = typename std::result_of<Function(Args...)>::type;
 #endif
     using subtask_t = std::function<entrails::task_t*()>;
-    
+
     if (m_info == nullptr)
       throw cool::exception::illegal_state("this task object is in undefined state");
 
@@ -828,21 +828,21 @@ template <> class task<void>
     aux->m_u.subtask = new subtask_t(std::bind(
             entrails::subtask_binder<void, subtask_result_t, Function
 #if !defined(INCORRECT_VARIADIC)
-		, Args...
+          , Args...
 #endif
-			>::rebind
+            >::rebind
           , aux
           , std::forward<Function>(func_)
 #if !defined(INCORRECT_VARIADIC)
           , std::forward<Args>(args_)...
 #endif
     ));
-     
+
     aux->m_deleter = std::bind(entrails::subtask_deleter<subtask_t>, aux->m_u.subtask);
     m_info = nullptr;     // invalidate state of current task
-    
+
     return task<subtask_result_t>(aux);
-  
+
   }
 
 
@@ -860,13 +860,13 @@ template <> class task<void>
 
     entrails::taskinfo* aux = new entrails::taskinfo(runner_);
     m_info->m_next = aux;
-    
+
     aux->m_eh = err_;
     aux->m_prev = m_info;
-    
+
     return task(std::move(*this));
   }
-  
+
   void run()
   {
     if (m_info == nullptr)
@@ -874,12 +874,12 @@ template <> class task<void>
 
     auto ptr = m_info;
     m_info = nullptr;  // prevent double delete
-  
+
     for ( ; ptr->m_prev != nullptr; ptr = ptr->m_prev)
     ;
     entrails::kickstart(ptr);
   }
-  
+
  private:
   friend class factory;
 #if defined(INCORRECT_VARIADIC)
@@ -908,7 +908,7 @@ template <> class task<void>
   template <typename T> friend class task;
   task(entrails::taskinfo* info) : m_info(info)
   { /* noop */ }
-  
+
  private:
   entrails::taskinfo* m_info;
 };
@@ -929,7 +929,7 @@ class factory
    *
    * @param runner_ the @ref cool::gcd::task::runner "runner" to run the
    *    @c func_ Callable.
-   * @param func_ the user supplied Callable to be scheduled for execution 
+   * @param func_ the user supplied Callable to be scheduled for execution
    * @param args_ additional arguments to be passed to the user provided
    *    Callable when it begins the execution.
    *
@@ -962,7 +962,7 @@ class factory
  *
  * Grouping asynchronous tasks allows for aggregate synchronization. The
  * application code can submit multiple tasks and track when they all complete,
- * event though they might use different @ref cool::gcd::task::runner "runners".
+ * even though they might use different @ref cool::gcd::task::runner "runners".
  * Such synchronization may be helpful when the application cannot progress
  * until all of the asynchronous tasks are complete.
  *
@@ -970,26 +970,26 @@ class factory
  * considered clones and they represent the same group of tasks.
  *
  * <b>Thread Safety</b><br>
- * The group objects are mostly, but not entirely thread safe. In particular, 
+ * The group objects are mostly, but not entirely thread safe. In particular,
  * it may happen that wait() returns prematurely if called from one thread
- * while another thread is adding tasks to the group. This limitiation extends
+ * while another thread is adding tasks to the group. This limitation extends
  * to the clones of the group object.
  */
 class group
 {
   group(group&& other) = delete;
   group& operator=(group&& other) = delete;
-  
+
  public:
  /**
   * Application handler type for completion callback.
   *
-  * The handler called when all asynchronous tasks in the group complete 
+  * The handler called when all asynchronous tasks in the group complete
   * execution must be a Callable that can be assigned to
   * <tt>std::function<void(void)></tt> function type.
   */
   typedef entrails::task_t handler_t;
-  
+
  public:
  /**
   * Construct a new group object.
@@ -1022,7 +1022,7 @@ class group
   *   last task completes.
   */
   dlldecl ~group();
-  
+
   /**
    * Accept the task for asynchronous execution as a part of the group.
    *
@@ -1034,16 +1034,16 @@ class group
    * @param args   A list of zero or more parameters to pass to the task when
    *               called.
    * @note
-   * Due to incorrect handling of empty parameter packs for variadic templates,
-   * the Callable object may not accept parameters when used in Microsoft
-   * Visual Studio 2013.
+   *   Due to incorrect handling of empty parameter packs for variadic templates,
+   *   the Callable object may not accept parameters when used in Microsoft
+   *   Visual Studio 2013.
    */
 #if defined(INCORRECT_VARIADIC)
   template <typename Function>
   void run(const runner& runner, Function&& task)
   {
     void* ctx = new entrails::task_t(task);
-    
+
     ::dispatch_group_async_f(m_group, runner, ctx, entrails::executor);
   }
 #else
@@ -1053,7 +1053,7 @@ class group
     std::function<typename std::result_of<Function(Args...)>::type(Args...)> aux = task;
     void* ctx = new entrails::task_t(
           bind(aux, std::forward<Args>(args)...));
-    
+
     ::dispatch_group_async_f(m_group, runner, ctx, entrails::executor);
   }
 #endif
@@ -1063,18 +1063,18 @@ class group
    * @param handler Handler to be called when task execution completes.
    *
    * Sets the application defined handler to be called when all asynchronous
-   * tasks currently in the group complete the execution. If no tasks are 
-   * running or are scheduled to run the handler is called immediatelly.
+   * tasks currently in the group complete the execution. If no tasks are
+   * running or are scheduled to run the handler is called immediately.
    *
    * @note The handler is called in the context of @ref cool::gcd::task::runner::cool_default()
-   * "global library runner".
+   *   "global library runner".
    * @note The handler is called only once. If new tasks are added after the
-   *  handler was called the application must set a new handler. Setting
-   *  multiple handlers before all tasks in the group complete will result
-   *  in calling all handlers after the last task completes.
+   *   handler was called the application must set a new handler. Setting
+   *   multiple handlers before all tasks in the group complete will result
+   *   in calling all handlers after the last task completes.
    */
   dlldecl void then(const handler_t& handler);
-  
+
   /**
    * Wait for the tasks to complete.
    *
@@ -1094,7 +1094,7 @@ class group
   {
     wait(std::chrono::duration_cast<std::chrono::nanoseconds>(interval).count());
   }
-  
+
   /**
    * Wait for the tasks to complete.
    *
@@ -1115,10 +1115,10 @@ class group
     int64_t w = std::chrono::duration_cast<std::chrono::nanoseconds>(when - Clock::now()).count();
     if (w < 0)
       throw cool::exception::timeout("Timeout while waiting for tasks to complete");
-    
+
     wait(w);
   }
-  
+
   /**
    * Wait for the tasks to complete.
    *
@@ -1134,7 +1134,7 @@ class group
    *   specify the completion handler for a group of tasks.
    */
   dlldecl void wait(int64_t interval);
-  
+
   /**
    * Wait for the tasks to complete.
    *
@@ -1144,11 +1144,11 @@ class group
    *   specify the completion handler for a group of tasks.
    */
   dlldecl void wait();
-  
+
  private:
   static void executor(void* ctx);
   static void finalizer(void* ctx);
-  
+
  private:
   dispatch_group_t m_group;
 };

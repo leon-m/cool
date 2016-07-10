@@ -18,7 +18,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
- 
+
 #if !defined(EXCEPTION_H_HEADER_GUARD)
 #define EXCEPTION_H_HEADER_GUARD
 
@@ -58,7 +58,7 @@ private:
  * an error condition that arises from the logical fault withing the
  * program. Examples of such faults are insertion of new elements into
  * containers that are already filled to their capacity, an array index that
- * is out the the array range, entering the method on the objet that is in
+ * is out of the array range, entering the method on the object that is in
  * a wrong state to perform it, and similar.
  */
 class logic_fault : public base
@@ -76,7 +76,7 @@ class illegal_state : public logic_fault
   dlldecl illegal_state(const std::string& msg) : logic_fault(msg) { /* noop */ }
 };
 /**
- * Denots a condition in which an object, or a system, has been asked to change
+ * Denotes a condition in which an object, or a system, has been asked to change
  * state into another state, but such transition cannot be done.
  */
 class illegal_transition : public logic_fault
@@ -86,7 +86,7 @@ class illegal_transition : public logic_fault
 };
 /**
  * Denotes a condition in which an object has, or has been asked to use, a
- * value that is out of it prescribed operational range.
+ * value that is out of its prescribed operational range.
  */
 class out_of_range : public logic_fault
 {
@@ -94,7 +94,7 @@ class out_of_range : public logic_fault
   dlldecl out_of_range(const std::string& msg) : logic_fault(msg) { /* noop */ }
 };
 /**
- * Denotes a condition in which an item searched for was not found
+ * Denotes a condition in which an item searched for was not found.
  */
 class not_found : public logic_fault
 {
@@ -134,7 +134,7 @@ class runtime_exception : public base
  public:
   dlldecl runtime_exception(const std::string& msg) : base(msg) { /* noop */ }
 };
-  
+
 class create_failure : public runtime_exception
 {
  public:
@@ -152,7 +152,7 @@ class bad_conversion : public runtime_exception
  public:
   dlldecl bad_conversion(const std::string& msg) : runtime_exception(msg) { /* noop */ }
 };
-  
+
 
 class unsupported_operation : public runtime_exception
 {

@@ -56,11 +56,11 @@ namespace async {
  *
  * An asynchronous reader monitors the associated file descriptor and invokes
  * the user supplied callback each time new data arrives and is ready to be read.
- * The callback is exectuted in asynchronously on  the task queue of the
+ * The callback is executed asynchronously on the task queue of the
  * specified task::runner.
  *
  * @note Upon object creation the reader is in the stopped state and must
- *  be explicitly started.
+ *   be explicitly started.
  *
  * <b>Thread Safety</b><br>
  *
@@ -82,11 +82,11 @@ class reader : public entrails::fd_io
   * handler receives the following parameters:
   *
   * @param fd file descriptor associated with the reader
-  * @param count  approximate number of bytes available. Note that the actual
-  * number of bytes may differ when actually read.
+  * @param count   approximate number of bytes available. Note that the actual
+  *   number of bytes may differ when actually read.
   */
   typedef entrails::fd_io::handler_t handler_t;
-  
+
  public:
   /**
    * Constructs a new instance of the asynchronous reader.
@@ -96,7 +96,7 @@ class reader : public entrails::fd_io
    * @param cb    user supplied callback to call when data is ready to be read
    * @param owner if true will close the file descriptor upon destruction
    *
-   * @note Asynchronous reader takes the ownership of the supplied file descriptior. The
+   * @note Asynchronous reader takes the ownership of the supplied file descriptor. The
    *   file descriptor will be closed by the reader instance upon its destruction.
    *   Closing the file descriptor outside the reader may lead to undefined
    *   behavior.
@@ -106,16 +106,16 @@ class reader : public entrails::fd_io
   reader(int fd, const task::runner& run, const handler_t& cb, bool owner = true)
       : entrails::fd_io(DISPATCH_SOURCE_TYPE_READ, fd, cb, run, owner)
   { /* noop */ }
-  
+
   /**
    * Start the asynchronous reader.
    *
    * The asynchronous reader will start calling the user supplied callback when
    * new data is ready for reading.
    *
-   * @note Immediatelly after creation the asyncronous reader is in the stopped
-   * state. The user must exlicitly call start() in order to start the
-   * operations.
+   * @note Immediately after creation the asynchronous reader is in the stopped
+   *   state. The user must explicitly call start() in order to start the
+   *   operations.
    */
   void start() { resume(); }
   /**
@@ -168,7 +168,7 @@ class writer
    * upon error the current write request is cancelled.
    */
   typedef std::function<void(int)> err_handler_t;
-  
+
  public:
   /**
    * Constructs a new instance of the asynchronous writer.
@@ -179,7 +179,7 @@ class writer
    * @param ecb user supplied callback to call if error occurs during write
    * @param owner if true will close the file descriptor upon destruction
    *
-   * @note Asynchronous writer takes the ownership of the supplied file descriptior. The
+   * @note Asynchronous writer takes the ownership of the supplied file descriptor. The
    *   file descriptor will be closed by the reader instance upon its destruction.
    *   Closing the file descriptor outside the writer may lead to undefined
    *   behavior.
@@ -191,7 +191,7 @@ class writer
          const handler_t& cb = handler_t(),
          const err_handler_t& ecb = err_handler_t(),
          bool owner = true);
-         
+
   /**
    * Request write.
    *
@@ -209,7 +209,7 @@ class writer
    *   exception.
    */
   void write(const void*  data, std::size_t size);
-  
+
   /**
    * Return true if write operation in progress.
    *
@@ -217,11 +217,11 @@ class writer
    * another write request would throw.
    */
   bool is_busy() const { return m_busy; }
-  
+
  private:
   void write_cb(int fd, std::size_t size);
   void set_idle();
-  
+
  private:
   entrails::async_writer m_writer;
   std::size_t            m_size;
@@ -231,18 +231,18 @@ class writer
   handler_t              m_cb;
   err_handler_t          m_err_cb;
   std::atomic_bool       m_busy;
-  
+
 };
 #endif
 /**
  * Asynchronous reader and writer.
  *
- * This class is a composition of cool::gcd::async::reader and 
+ * This class is a composition of cool::gcd::async::reader and
  * cool::gcd::async::writer classes.
  *
  * @note Upon creation the reader part of the asynchronous reader/writer is
- *  in the stopped state and must be explicitly started. The writer part. however,
- *  is immediately ready  to accept write requests.
+ *   in the stopped state and must be explicitly started. The writer part,
+ *   however, is immediately ready to accept write requests.
  *
  * <b>Thread Safety</b><br>
  * Instances of cool::gcd::async::writer class are not thread safe.
@@ -268,7 +268,7 @@ class reader_writer
    * @param err_cb user supplied callback to call if error occurs during write
    * @param owner if true will close the file descriptor upon destruction
    *
-   * @note Asynchronous reader/writer takes the ownership of the supplied file descriptior. The
+   * @note Asynchronous reader/writer takes the ownership of the supplied file descriptor. The
    *   file descriptor will be closed by the reader instance upon its destruction.
    *   Closing the file descriptor outside the reader/writer may lead to undefined
    *   behavior.
@@ -281,7 +281,7 @@ class reader_writer
                 const writer::handler_t& wr_cb = writer::handler_t(),
                 const writer::err_handler_t& err_cb = writer::err_handler_t(),
                 bool owner = true);
-  
+
   /**
    * Request write.
    *
@@ -308,9 +308,9 @@ class reader_writer
    * The reader will start calling the user supplied callback when
    * new data is ready for reading.
    *
-   * @note Immediatelly after creation the reader is in the stopped
-   * state. The user must exlicitly call start() in order to start the
-   * operations.
+   * @note Immediately after creation the reader is in the stopped
+   *   state. The user must explicitly call start() in order to start the
+   *   operations.
    */
   void start() { m_rd.start(); }
   /**
@@ -358,12 +358,12 @@ class reader_writer
  *   upon arrival of the signal.
  *
  * @warning When the signal object is created it will set the signal(2) handler
- *  to SIG_IGN. This setting remains effective event after the last signal
- *  object for this signal number is destroyed.
+ *   to SIG_IGN. This setting remains effective event after the last signal
+ *   object for this signal number is destroyed.
  *
  * @warning Manipulating the software signal via signal(2) or sigaction(2)
- *  interfaces after the signal object for this software signal is created
- *  results in undefined behavior.
+ *   interfaces after the signal object for this software signal is created
+ *   results in undefined behavior.
  *
  * <b>Thread Safety</b><br>
  * Instances of cool::gcd::async::signal class are not thread safe.
@@ -378,7 +378,7 @@ class signal : public entrails::async_source<std::function<void(int, int)>, int>
 {
  public:
   /**
-   * The user signal handler type. 
+   * The user signal handler type.
    *
    * The user signal handler must be Callable that can be assigned to this
    * function type. When called, the handler receives the following parameters:
@@ -393,7 +393,7 @@ class signal : public entrails::async_source<std::function<void(int, int)>, int>
 
  private:
   typedef entrails::source_data<handler_t, int> context_t;
-  
+
  public:
   /**
    * Create a signal object for the specified software signal number.
@@ -402,9 +402,9 @@ class signal : public entrails::async_source<std::function<void(int, int)>, int>
    * @param handler Handler to be called when the software signal is detected.
    * @exception cool::exception::create_failure Thrown if signal object cannot be created.
    * @exception cool::exception::illegal_argument Thrown if signal number is out of range
-   *    or if it equals to SIGKILL or SIGSTOP, which cannot be intercepted.
+   *   or if it equals SIGKILL or SIGSTOP, which cannot be intercepted.
    *
-   * Upon arrival of the specified sofware signal the callback is called from the
+   * Upon arrival of the specified software signal the callback is called from the
    * context of @ref cool::gcd::task::runner::sys_default() "the default system runner".
    */
   signal(int signo, const handler_t& handler);
@@ -417,7 +417,7 @@ class signal : public entrails::async_source<std::function<void(int, int)>, int>
    *
    * @exception cool::exception::create_failure Thrown if signal object cannot be created
    * @exception cool::exception::illegal_argument Thrown if signal number is out of range
-   *    or if it equals to SIGKILL or SIGSTOP, which cannot be intercepted.
+   *   or if it equals SIGKILL or SIGSTOP, which cannot be intercepted.
    */
   signal(int signo, const handler_t& handler, const task::runner& runner);
   /**
@@ -426,17 +426,17 @@ class signal : public entrails::async_source<std::function<void(int, int)>, int>
    * This call will restart the signal delivery after it was stopped by a call
    * to stop().
    */
-  void start() { resume();  }
+  void start() { resume(); }
   /**
    * Stop delivering the signal.
    *
    * After this call the signal handler will no longer be called although the
-   * signal will still be registered internally and the signal conuter will be
-   * incremented. A call to stop() will effectivelly ignore the software signal.
+   * signal will still be registered internally and the signal counter will be
+   * incremented. A call to stop() will effectively ignore the software signal.
    * Use start() to restart the signal delivery.
    */
   void stop()  { suspend(); }
-  
+
  private:
   static void signal_handler(void* ctx);
 };
@@ -451,7 +451,7 @@ class signal : public entrails::async_source<std::function<void(int, int)>, int>
 // --------------------------------------------------------------------------
 // --------------------------------------------------------------------------
 /**
- * Timer objecs.
+ * Timer objects.
  *
  * Timer objects enable the user to specify the callback into the user
  * code which is called periodically. Timer objects are @ref cool::basis::named
@@ -459,13 +459,13 @@ class signal : public entrails::async_source<std::function<void(int, int)>, int>
  * @ref cool::gcd::task::runner "runner" to call the user callback.
  *
  * @note Upon creation the timer object is inactive and must be explicitly
- *  started using start().
+ *   started using start().
  * @note Timer objects created via copy construction or copy assignment
- *  are clones and refer to the same underlying system timer. Any changes
- *  made through one of the clones will affect all clones. The system
- *  timer will be destroyed when the last clone is destroyed. You can use
- *  name() method to check whether two timer objects are clones; all clones
- *  have the same name.
+ *   are clones and refer to the same underlying system timer. Any changes
+ *   made through one of the clones will affect all clones. The system
+ *   timer will be destroyed when the last clone is destroyed. You can use
+ *   name() method to check whether two timer objects are clones; all clones
+ *   have the same name.
  *
  * @warning The user callback must not throw.
  *
@@ -481,7 +481,7 @@ class timer : public basis::named,
   /**
    * User callback type.
    *
-   * The user callback must be Callable that can be assignet to function
+   * The user callback must be Callable that can be assigned to function
    * type <tt>std::function<void(unsigned long)</tt>. When called,
    * the function receives the following parameters:
    *
@@ -489,15 +489,15 @@ class timer : public basis::named,
    *   calls.
    *
    * @note If the timer is suspended through the call to suspend() it will
-   *  still trigger at each period but without calling the user callback.
+   *   still trigger at each period but without calling the user callback.
    *
    * @warning The user callback must not throw.
    */
   typedef std::function<void(unsigned long count)> handler_t;
-  
+
 private:
   typedef entrails::source_data<handler_t, void> context_t;
-  
+
  public:
   /**
    * Create a timer object.
@@ -507,7 +507,7 @@ private:
    * @param handler The user specified callback.
    * @param runner  The @ref cool::gcd::task::runner "runner" to use to
    *                call the user callback from
-   * @param period The period of the timer.
+   * @param period  The period of the timer.
    *
    * @exception cool::exception::create_failure Thrown if timer cannot be created.
    * @exception cool::exception::illegal_argument Thrown if the period is set to 0.
@@ -536,7 +536,7 @@ private:
    * @param handler The user specified callback.
    * @param runner  The @ref cool::gcd::task::runner "runner" to use to
    *                call the user callback from
-   * @param period The period of the timer.
+   * @param period  The period of the timer.
    *
    * @exception cool::exception::create_failure Thrown if timer cannot be created.
    * @exception cool::exception::illegal_argument Thrown if the period is set to 0.
@@ -555,7 +555,7 @@ private:
   {
     set_period(period, std::chrono::duration<Rep, Period>::zero());
   }
-  
+
   /**
    * Create a timer object.
    *
@@ -564,7 +564,7 @@ private:
    * @param handler The user specified callback.
    * @param runner  The @ref cool::gcd::task::runner "runner" to use to
    *                call the user callback from
-   * @param period The period of the timer.
+   * @param period  The period of the timer.
    * @param leeway  The amount of time the system can defer the timer.
    *
    * @exception cool::exception::create_failure Thrown if timer cannot be created.
@@ -572,9 +572,9 @@ private:
    *
    * @note Upon creating the timer is inactive and must explicitly be activated
    *   via start().
-   * @note The leeway is the hint form the application code up to which the system
+   * @note The leeway is the hint from the application code up to which the system
    *   can defer the timer to align with other system activity and performance.
-   *   Depending on the overal load the system may be forced to exceed the leeway.
+   *   Depending on the overall load the system may be forced to exceed the leeway.
    * @note The name of the timer object is prefixed with string <tt>timer-</tt>.
   */
   template <typename Rep, typename Period, typename Rep2, typename Period2>
@@ -586,7 +586,7 @@ private:
   {
     set_period(period, leeway);
   }
-  
+
   /**
    * Create a timer object.
    *
@@ -596,7 +596,7 @@ private:
    * @param handler The user specified callback.
    * @param runner  The @ref cool::gcd::task::runner "runner" to use to
    *                call the user callback from
-   * @param period The period of the timer.
+   * @param period  The period of the timer.
    * @param leeway  The amount of time the system can defer the timer.
    *
    * @exception cool::exception::create_failure Thrown if timer cannot be created.
@@ -604,9 +604,9 @@ private:
    *
    * @note Upon creating the timer is inactive and must explicitly be activated
    *   via start().
-   * @note The leeway is the hint form the application code up to which the system
+   * @note The leeway is the hint from the application code up to which the system
    *   can defer the timer to align with other system activity and performance.
-   *   Depending on the overal load the system may be forced to exceed the leeway.
+   *   Depending on the overall load the system may be forced to exceed the leeway.
    */
   template <typename Rep, typename Period, typename Rep2 ,typename Period2>
   timer(const std::string& prefix,
@@ -637,7 +637,7 @@ private:
   dlldecl timer(const handler_t& handler, const task::runner& runner)
       : timer("timer", handler, runner)
   { /* noop */ }
-  
+
   /**
    * Create a timer object.
    *
@@ -670,11 +670,11 @@ private:
    *
    * @note Upon creating the timer is inactive and must explicitly be activated
    *   via start().
-   * @note The leeway is the hint form the application code up to which the system
+   * @note The leeway is the hint from the application code up to which the system
    *   can defer the timer to align with other system activity and performance.
-   *   Depending on the overal load the system may be forced to exceed the leeway.
+   *   Depending on the overall load the system may be forced to exceed the leeway.
    * @note The name of the timer object is prefixed with string <tt>timer-</tt>.
-   * @note The leeway paramater is optional. If not specified it is set to 1% of
+   * @note The leeway parameter is optional. If not specified it is set to 1% of
    *   the period or to at least 1 nanosecond.
    */
   dlldecl timer(const handler_t& handler,
@@ -685,7 +685,7 @@ private:
   {
     _set_period(period, leeway);
   }
- 
+
   /**
    * Create a timer object.
    *
@@ -703,10 +703,10 @@ private:
    *
    * @note Upon creating the timer is inactive and must explicitly be activated
    *   via start().
-   * @note The leeway is the hint form the application code up to which the system
+   * @note The leeway is the hint from the application code up to which the system
    *   can defer the timer to align with other system activity and performance.
-   *   Depending on the overal load the system may be forced to exceed the leeway.
-   * @note The leeway paramater is optional. If not specified it is set to 1% of
+   *   Depending on the overall load the system may be forced to exceed the leeway.
+   * @note The leeway parameter is optional. If not specified it is set to 1% of
    *   the period or to at least 1 nanosecond.
    */
   dlldecl timer(const std::string& prefix,
@@ -718,7 +718,7 @@ private:
   {
     _set_period(period, leeway);
   }
-  
+
   /**
    * Set or change the period of the timer.
    *
@@ -727,7 +727,7 @@ private:
    * time the period must be set before they can be started. When changing the
    * period the new period becomes effective after the call to start().
    *
-   * @param period The period of the timer.
+   * @param period  The period of the timer.
    *
    * @exception cool::exception::illegal_argument Thrown if the period is set to 0.
    *
@@ -739,7 +739,7 @@ private:
   {
     _set_period(std::chrono::duration_cast<std::chrono::nanoseconds>(period).count(), 0);
   }
-  
+
   /**
    * Set or change the period of the timer.
    *
@@ -748,7 +748,7 @@ private:
    * time the period must be set before they can be started. When changing the
    * period the new period becomes effective after the call to start().
    *
-   * @param period The period of the timer.
+   * @param period  The period of the timer.
    * @param leeway  The amount of time the system can defer the timer.
    *
    * @exception cool::exception::illegal_argument Thrown if the period is set to 0.
@@ -760,7 +760,7 @@ private:
     _set_period(std::chrono::duration_cast<std::chrono::nanoseconds>(period).count(),
                 std::chrono::duration_cast<std::chrono::nanoseconds>(leeway).count());
   }
-  
+
   /**
    * Set or change the period of the timer.
    *
@@ -769,19 +769,19 @@ private:
    * time the period must be set before they can be started. When changing the
    * period the new period becomes effective after the call to start().
    *
-   * @param period The period of the timer in nanoseconds.
+   * @param period  The period of the timer in nanoseconds.
    * @param leeway  The amount of time, in nanoseconds, the system can defer the timer.
    *
    * @exception cool::exception::illegal_argument Thrown if the period is set to 0.
    *
-   * @note The leeway paramater is optional. If not specified it is set to 1% of
+   * @note The leeway parameter is optional. If not specified it is set to 1% of
    *   the period or to at least 1 nanosecond.
    */
   dlldecl void set_period(uint64_t period, uint64_t leeway = 0)
   {
     _set_period(period, leeway);
   }
-  
+
   /**
    * Start or restart the timer.
    *
@@ -793,7 +793,7 @@ private:
    * @note start() is required after the period of the timer is changed.
    */
   dlldecl void start();
-  
+
   /**
    * Suspend the timer.
    *
@@ -802,12 +802,12 @@ private:
    * user callback.
    */
   dlldecl void suspend() { async_source::suspend(); }
-  
+
   /**
    * Resume the timer.
    *
    * Resumes the timer by enabling the calls to the user callback. Since
-   * the timer was running even when disabled, the first time the timer will 
+   * the timer was running even when disabled, the first time the timer will
    * call the user callback is at the next period as measured internally by
    * the timer.
    */
@@ -815,11 +815,11 @@ private:
   {
     async_source::resume();
   }
-  
+
  private:
   static void timer_handler(void* ctx);
   dlldecl void _set_period(uint64_t period, uint64_t leeway);
-  
+
  private:
   uint64_t  m_period;
   uint64_t  m_leeway;
@@ -838,16 +838,16 @@ private:
 /**
  * Observe file system object.
  *
- * The fs_observer class provides a mechanism to observe events occuring on
+ * The fs_observer class provides a mechanism to observe events occurring on
  * selected file system object. When the event is triggered by an external
- * soruce, the fs_observer objet will call the user provided handler
+ * source, the fs_observer object will call the user provided handler
  * asynchronously with regard to the program execution. If several different
  * events occur before the user handler is called, the fs_observer will merge
- * correspodning @ref Flags "flags" into a single value by OR'ing them into
+ * corresponding @ref Flags "flags" into a single value by OR'ing them into
  * a single value..
  *
  * @note The fs_observer object is not active upon creation, and will not
- *  call the user handler when triggered. Use start() method to activate it.
+ *   call the user handler when triggered. Use start() method to activate it.
  *
  * <b>Thread Safety</b><br>
  *
@@ -862,13 +862,13 @@ private:
 class fs_observer : public entrails::async_source<std::function<void(unsigned long)>, int>
 {
  public:
-  /** 
+  /**
    * User handler type.
-   * 
+   *
    * The user handler must be a Callable that can be assigned to the function
    * object of this type.
    *
-   * @param value Bitmask specifying events that occured on the observed
+   * @param value Bitmask specifying events that occurred on the observed
    *   file system object. Bitmask contains OR'ed values from the @ref Flags
   *    enumeration.
    *
@@ -876,29 +876,29 @@ class fs_observer : public entrails::async_source<std::function<void(unsigned lo
    */
   typedef std::function<void(unsigned long)> handler_t;
   /**
-   * Bitmap flags to use to specify the observed characterists, and to
+   * Bitmap flags to use to specify the observed characteristics, and to
    * communicate to the user handler a set of characteristics that have changed
    */
   enum Flags {
     //! The observed file system object was deleted.
-    Delete    = DISPATCH_VNODE_DELETE,
-    //! Write operation occured on the observed file system object.
-    Write     = DISPATCH_VNODE_WRITE,
+    Delete     = DISPATCH_VNODE_DELETE,
+    //! Write operation occurred on the observed file system object.
+    Write      = DISPATCH_VNODE_WRITE,
     //! The observed file system object changed in size.
-    Extend    = DISPATCH_VNODE_EXTEND,
+    Extend     = DISPATCH_VNODE_EXTEND,
     //! The file system object metadata changed.
-    Atributes = DISPATCH_VNODE_ATTRIB,
+    Attributes = DISPATCH_VNODE_ATTRIB,
     //! The link count of the observed file system object changed.
-    Link      = DISPATCH_VNODE_LINK,
+    Link       = DISPATCH_VNODE_LINK,
     //! The observed file system object was renamed.
-    Rename    = DISPATCH_VNODE_RENAME,
+    Rename     = DISPATCH_VNODE_RENAME,
     //! The observed file system object was revoked.
-    Revoke    = DISPATCH_VNODE_REVOKE
+    Revoke     = DISPATCH_VNODE_REVOKE
   };
-  
+
  private:
   typedef entrails::source_data<handler_t, int> context_t;
-  
+
  public:
   /**
    * Create fs_observer object.
@@ -908,15 +908,15 @@ class fs_observer : public entrails::async_source<std::function<void(unsigned lo
    * @param handler User handler to be called when the fs_observer object is triggered.
    * @param fd File descriptor of the opened file system object to observe
    * @param events A bit mask specifying events of interest to observe on the
-   *   file system object. The mask is a OR'ed combination of values from the
+   *   file system object. The mask is an OR'ed combination of values from the
    *   @ref Flags enumeration.
    * @param runner  cool::gcd::task:runner to use to execute the user handler. It
    *   defaults to @ref cool::gcd::task::runner::cool_default() "library global runner"
    *
    * @note The fs_observer object is not active upon creation, and will not
-   *  call the user handler when triggered. Use start() method to activate it.
-   * @warning The fs_object takes ownership of the file descriptior and will
-   *  close it upon destruction.
+   *   call the user handler when triggered. Use start() method to activate it.
+   * @warning The fs_object takes ownership of the file descriptor and will
+   *   close it upon destruction.
    */
   fs_observer(const handler_t& handler,
               int fd,
@@ -925,11 +925,11 @@ class fs_observer : public entrails::async_source<std::function<void(unsigned lo
   /**
    * Start delivering the events.
    *
-   * This call will start, or restart the event delivery after creation or if 
+   * This call will start, or restart the event delivery after creation or if
    * it was stopped by a call to stop().
    */
   void start() { resume();  }
-  
+
   /**
    * Stop delivering the events.
    *
@@ -962,7 +962,7 @@ class fs_observer : public entrails::async_source<std::function<void(unsigned lo
  * being set of characteristics that have changed.
  *
  * @note The data_observer object is not active upon creation, and will not
- *  call the user handler when triggered. Use start() method to activate it.
+ *   call the user handler when triggered. Use start() method to activate it.
  *
  * <b>Thread Safety</b><br>
  * Instances of cool::gcd::async::data_observer class are thread safe.
@@ -975,9 +975,9 @@ class fs_observer : public entrails::async_source<std::function<void(unsigned lo
 class data_observer : public entrails::async_source<std::function<void(unsigned long)>, void>
 {
  public:
-  /** 
+  /**
    * User handler type.
-   * 
+   *
    * The user handler must be a Callable that can be assigned to the function
    * object of this type.
    *
@@ -994,10 +994,10 @@ class data_observer : public entrails::async_source<std::function<void(unsigned 
     Add,         //!< Values are added together ignoring the mask
     BitwiseOr    //!< Mask is applied to each value; results are merged using bitwise OR
   };
-  
+
  private:
   typedef entrails::source_data<handler_t, void> context_t;
-  
+
  public:
   /**
    * Create data_observer object.
@@ -1013,17 +1013,17 @@ class data_observer : public entrails::async_source<std::function<void(unsigned 
    *   is ignored if merge strategy is set to CoalesceStrategy::Add.
    *
    * @note The data_observer object is not active upon creation, and will not
-   *  call the user handler when triggered. Use start() method to activate it.
+   *   call the user handler when triggered. Use start() method to activate it.
    */
   dlldecl data_observer(const handler_t& handler,
                 const task::runner& runner = gcd::task::runner::cool_default(),
                 CoalesceStrategy strategy = BitwiseOr,
                 unsigned long mask = 0);
-  
+
   /**
    * Start delivering the events.
    *
-   * This call will start, or restart the event delivery after creation or if 
+   * This call will start, or restart the event delivery after creation or if
    * it was stopped by a call to stop().
    */
   dlldecl void start() { resume(); }
@@ -1043,7 +1043,7 @@ class data_observer : public entrails::async_source<std::function<void(unsigned 
    *   handler will not be called.
    */
   dlldecl void send(unsigned long value);
-  
+
  private:
   static void handler(void* ctx);
 };
@@ -1061,11 +1061,11 @@ class data_observer : public entrails::async_source<std::function<void(unsigned 
  * Observing another process.
  *
  * The proc_observer class provides a mechanism to trigger events associated with
- * another process. The proc_observer will observe the specified process and triger
- * an event when one or more observed things happed to the observed process.
+ * another process. The proc_observer will observe the specified process and trigger
+ * an event when one or more observed things happened to the observed process.
  *
  * @note The proc_observer object is not active upon creation, and will not
- *  call the user handler when triggered. Use start() method to activate it.
+ *   call the user handler when triggered. Use start() method to activate it.
  *
  * <b>Thread Safety</b><br>
  * Instances of cool::gcd::async::proc_observer class are thread safe.
@@ -1079,9 +1079,9 @@ class data_observer : public entrails::async_source<std::function<void(unsigned 
 class proc_observer : public entrails::async_source<std::function<void(unsigned long)>, void>
 {
  public:
-  /** 
+  /**
    * User handler type.
-   * 
+   *
    * The user handler must be a Callable that can be assigned to the function
    * object of this type.
    *
@@ -1090,15 +1090,15 @@ class proc_observer : public entrails::async_source<std::function<void(unsigned 
    * @note The value is reset to 0 after the call to the user handler.
    */
   typedef std::function<void(unsigned long)> handler_t;
-  
+
   static const uint64_t EXIT = DISPATCH_PROC_EXIT;
   static const uint64_t EXEC = DISPATCH_PROC_EXEC;
   static const uint64_t FORK = DISPATCH_PROC_FORK;
   static const uint64_t SIGNAL = DISPATCH_PROC_SIGNAL;
-  
+
  private:
   typedef entrails::source_data<handler_t, void> context_t;
-  
+
  public:
   /**
    * Create proc_observer object.
@@ -1116,17 +1116,17 @@ class proc_observer : public entrails::async_source<std::function<void(unsigned 
    *      - EXEC; notify when the observed process becomes another executable
    *      - SIGNAL; notify when a software signal is delivered to the observed process
    * @note The proc_observer object is not active upon creation, and will not
-   *  call the user handler when triggered. Use start() method to activate it.
+   *   call the user handler when triggered. Use start() method to activate it.
    */
   proc_observer(const handler_t& handler,
                 pid_t pid,
                 const task::runner& runner = gcd::task::runner::cool_default(),
                 unsigned long mask = EXIT);
-  
+
   /**
    * Start delivering the events.
    *
-   * This call will start, or restart the event delivery after creation or if 
+   * This call will start, or restart the event delivery after creation or if
    * it was stopped by a call to stop().
    */
   void start() { resume();  }
@@ -1137,7 +1137,7 @@ class proc_observer : public entrails::async_source<std::function<void(unsigned 
    * be coalesced until the observer object is started again.
    */
   void stop()  { suspend(); }
-  
+
  private:
   static void handler(void* ctx);
 };

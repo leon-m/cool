@@ -40,7 +40,7 @@
 
    - @ref cool::net::ip contains IP protocol generic abstractions
    - @ref cool::net::ipv6 implements generic abstractions for IPv6 protocol
-   - @ref cool::net::ipv4 implementa generic abstractions for IPv4 protocol
+   - @ref cool::net::ipv4 implements generic abstractions for IPv4 protocol
 
 @ref cool::gcd contains abstractions built on top of Apple’s GCD, or libdispatch library:
 

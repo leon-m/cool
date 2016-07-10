@@ -35,7 +35,7 @@
 #include "cool/gcd_async.h"
 
 namespace cool { namespace gcd { namespace async {
-  
+
 namespace entrails {
 
 #if defined(APPLE_TARGET) || defined(LINUX_TARGET)
@@ -78,7 +78,7 @@ void fd_io::event_cb(void *ctx)
 }
 #endif
 } // namespace
-  
+
 #if defined(APPLE_TARGET) || defined(LINUX_TARGET)
 
 writer::writer(int fd, const task::runner& run, const handler_t& cb, const err_handler_t& ecb, bool owner)
@@ -94,7 +94,7 @@ void writer::write(const void *data, std::size_t size)
   bool expect = false;
   if (!m_busy.compare_exchange_strong(expect, true))
     throw exception::illegal_state("writer is busy");
-  
+
   m_data = data;
   m_size = size;
   m_remain = size;
@@ -113,9 +113,9 @@ void writer::write_cb(int fd, std::size_t n)
 {
   if (m_remain == 0)
     return;
-  
+
   auto res = ::write(fd, m_position, m_remain);
-  
+
   // upon error disable current write operation and invoke error callback
   if (res < 0)
   {
@@ -123,14 +123,14 @@ void writer::write_cb(int fd, std::size_t n)
     set_idle();
     if (m_err_cb)
       m_err_cb(err);
-    
+
     m_busy = false;
     return;
   }
-  
+
   m_remain -= res;
   m_position += res;
-  
+
   if (m_remain == 0)
   {
     set_idle();
@@ -163,7 +163,7 @@ reader_writer::reader_writer(int fd,
 signal::signal(int signo, const handler_t& handler)
     : signal(signo, handler, cool::gcd::task::runner::cool_default())
 { /* noop */ }
-  
+
 signal::signal(int signo, const handler_t& handler, const task::runner& runner)
     : async_source(::dispatch_source_create(DISPATCH_SOURCE_TYPE_SIGNAL, signo, 0, runner), handler)
 {
@@ -172,7 +172,7 @@ signal::signal(int signo, const handler_t& handler, const task::runner& runner)
     case SIGKILL:
     case SIGSTOP:
       throw exception::illegal_argument("SIGKILL and SIGSTOP cannot be intercepted.");
-      
+
     default:
       if (::signal(signo, SIG_IGN) == SIG_ERR)
       {
@@ -219,12 +219,12 @@ void timer::_set_period(uint64_t period, uint64_t leeway)
 {
   if (period == 0)
     throw exception::illegal_argument("Timer interval must be greater than 0");
-  
+
   leeway = leeway == 0 ? period / 100 : leeway;
-  
+
   if (leeway < 1)
     leeway = 1;
-  
+
   m_period = period;
   m_leeway = leeway;
 }
@@ -246,7 +246,7 @@ void timer::start()
 {
   if (m_period == 0)
     throw exception::illegal_state("The timer period was not set.");
-  
+
   ::dispatch_source_set_timer(source(), ::dispatch_time(DISPATCH_TIME_NOW, m_period), m_period, m_leeway);
   async_source::resume();
 }

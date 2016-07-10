@@ -30,7 +30,7 @@ void aim<void>::then(const aim_base<void>::state_t::success_cb_t& scb,
                      const aim_base<void>::state_t::failure_cb_t& fcb)
 {
   bool fail;
-  // if the result is already available fire immediatelly
+  // if the result is already available, fire immediately
   if (then_base(fail, scb, fcb))
   {
     try
@@ -55,7 +55,7 @@ aim<void>::this_t aim<void>::then(const aim_base<void>::state_t::chained_cb_t& c
 {
   vow_t* p = new vow_t();
   this_t h = p->get_aim();
-  
+
   then(
     [=] ()
     {
@@ -73,20 +73,20 @@ aim<void>::this_t aim<void>::then(const aim_base<void>::state_t::chained_cb_t& c
       delete p;
     }
   );
-  
+
   return h;
 }
 
 void vow<void>::set() const
 {
   vow_base<void>::state_t::success_cb_t scb;
-  
+
   {
     std::unique_lock<std::mutex> l (vow_base<void>::m_state->mutex());
-    
+
     if (!vow_base<void>::m_state->is_empty())
       throw exception::illegal_state("This vow was already set.");
-    
+
     vow_base<void>::m_state->set_result();
     scb = std::move(vow_base<void>::m_state->on_success());
     if (scb)
@@ -94,7 +94,7 @@ void vow<void>::set() const
     else
       vow_base<void>::m_state->cv().notify_all();
   }
-  
+
   if (scb)
   {
     scb();
@@ -103,7 +103,7 @@ void vow<void>::set() const
 
 
 namespace entrails {
-  
+
 void state_base::failure(const std::exception_ptr& err)
 {
   if (!is_empty())
@@ -118,8 +118,8 @@ void state<void>::set_result()
     throw exception::illegal_state("This state was already set.");
   m_state = SUCCESS;
 }
-  
+
 } } // namespace
-  
+
 } // namespace
 

@@ -26,7 +26,7 @@ class test_binary : public CppUnit::TestFixture
   CPPUNIT_TEST_SUITE(test_binary);
   CPPUNIT_TEST(test_one);
   CPPUNIT_TEST_SUITE_END();
-  
+
 public:
   void test_one();
 };

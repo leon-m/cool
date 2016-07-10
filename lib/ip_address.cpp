@@ -32,26 +32,26 @@ std::istream& operator >>(std::istream& is, cool::net::ip::address& val)
     case cool::net::ip::IPv4:
       cool::net::entrails::ipv4::parse(is, val);
       break;
-      
+
     case cool::net::ip::IPv6:
       cool::net::entrails::ipv6::parse(is, val);
       break;
   }
   return is;
 }
-  
+
 
 namespace cool { namespace net {
 
 
 namespace ipv4 {
-  
+
   // Assigned numbers
-  
+
   const host loopback = { 127, 0, 0, 1 };
   const host any;
   const host broadcast = { 255, 255, 255, 255 };
-  
+
   const network rfc_broadcast = { 8, { } };   // 0.0.0.0/8
   const network rfc_private_24 = { 24, { 10 } };
   const network rfc_private_20 = { 20, { 172, 16 } };
@@ -68,12 +68,12 @@ namespace ipv4 {
   const network rfc_mcast = { 4, { 224 } };
   const network rfc_test_mcast = { 24, { 233, 252 } };
   const network rfc_future = { 4, { 240 } };
-  
+
 } // namespace ipv4
 
 namespace ipv6 {
   // Assigned numbers
-  
+
   const host loopback = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };
   const host unspecified;
   const network rfc_ipv4map = { 96, { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff } };
@@ -84,27 +84,27 @@ namespace ipv6 {
   const network rfc_local = { 7, { 0xfc } };
   const network rfc_link = { 10, { 0xfe, 0x80 } };
   const network rfc_mcast = { 0, { 0xff } };
-  
+
 } // namespace ipv6
 
 namespace entrails {
-  
+
 template <typename T> class refwrap
 {
 public:
   typedef const T& value_t;
-    
+
   refwrap(const T& arg) : m_ref(arg) { /* noop */ }
   operator value_t() const { return m_ref; }
-    
+
 private:
   value_t m_ref;
 };
- 
+
 typedef refwrap<ip::address> list_t;
-  
+
 namespace ipv4 {
-  
+
   const list_t assigned_list[] = {
     cool::net::ipv4::loopback,
     cool::net::ipv4::any,
@@ -126,11 +126,11 @@ namespace ipv4 {
     cool::net::ipv4::rfc_test_mcast,
     cool::net::ipv4::rfc_future
   };
-    
+
     const std::size_t assigned_list_size = sizeof(assigned_list)/sizeof(refwrap<ip::address>);
-    
+
 } // namespace ipv4
-  
+
 namespace ipv6 {
   const list_t assigned_list[] = {
     cool::net::ipv6::loopback,
@@ -144,7 +144,7 @@ namespace ipv6 {
     cool::net::ipv6::rfc_link,
     cool::net::ipv6::rfc_mcast
   };
-  
+
   const std::size_t assigned_list_size = sizeof(assigned_list)/sizeof(refwrap<ip::address>);
 
 } // namespace ipv6
@@ -159,7 +159,7 @@ bool is_assigned(list_t const list[], std::size_t size, const ip::address& addr)
         if (list[i] == addr)
           return true;
         break;
-          
+
       case ip::NetworkAddress:
         if (addr.in(dynamic_cast<const ip::network&>(static_cast<list_t::value_t>(list[i]))))
           return true;
@@ -168,7 +168,7 @@ bool is_assigned(list_t const list[], std::size_t size, const ip::address& addr)
   }
   return false;
 }
-  
+
 const char* hex_digits = "0123456789abcdef";
 
 // ===========================================================================
@@ -189,7 +189,7 @@ char parse_num(std::istream& is, unsigned int& res)
 {
   char c;
   res = 0;
-  
+
   for (c = is.get(); !is.eof() && (c >= '0' && c <= '9'); c = is.get())
   {
     res = 10 * res + (c - '0');
@@ -202,7 +202,7 @@ cool::net::ipv4::binary_t _parse(std::istream& is)
 {
   binary_t result;
   int count;
-  
+
   for (count = 0; count < 4; ++count)
   {
     unsigned int aux;
@@ -210,17 +210,17 @@ cool::net::ipv4::binary_t _parse(std::istream& is)
     if (aux > 255)
       throw exception::illegal_argument("value of IPv4 address element cannot exceed 255");
     result[count] = aux;
-    
+
     if (c != '.' && count < 3)
       throw exception::illegal_argument("unparsable IPv4 address in input stream");
   }
-  
+
   if (count < 4)
     throw exception::illegal_argument("unparsable IPv4 address in input stream");
-  
+
   if (!is.eof())   // push back the last character if not EOF
     is.unget();
-  
+
   return result;
 }
 
@@ -244,8 +244,8 @@ void parse(std::istream& is, cool::net::ipv4::network& val)
   }
   else if (!is.eof())
     is.unget();
-  
-  val =  cool::net::ipv4::network(mask, addr);
+
+  val = cool::net::ipv4::network(mask, addr);
 }
 
 void parse(std::istream& is, ip::address& val)
@@ -278,7 +278,7 @@ namespace ipv6
 
 // NOTE: Term "quad" in below code refers to two-byte quantity which value
 //       can be visualized with four hex digits.
-  
+
 //
 //    byte        0         1
 //           +----+----+----+----+
@@ -291,26 +291,26 @@ class quad_wrap
   // NOTE const_cast!!! It's dirty but it works.
   quad_wrap(const uint8_t* data) : m_data(const_cast<uint8_t*>(data)) { /* noop */ }
   operator uint16_t () const { return (m_data[0] << 8) | m_data[1]; }
-  
+
   // Return a nibble (four bits) from the quad.
   int operator [] (int index) const
   {
     return (index & 0x01) == 0 ? m_data[index >> 1] >> 4 : m_data[index >> 1] & 0xF;
   }
-  
+
   // Assign value to nibble 3 (rightmost nibble)
   void operator =(int value)
   {
     m_data[1] |= (value & 0x0F);
   }
-  
+
   void operator <<=(int n)
   {
     n &= 0x03;   // Doesn't make sense to shift more than four times
     for (int i = 0; i < n; ++i)
       shl();
   }
-  
+
  private:
   void shl()
   {
@@ -318,7 +318,7 @@ class quad_wrap
     m_data[0] |= ((m_data[1] >> 4) & 0x0F);
     m_data[1] <<= 4;
   }
-  
+
  private:
   uint8_t* m_data;
 };
@@ -353,11 +353,11 @@ void find_longest_0_quad_sequence(uint8_t const val[], int& start, int& length)
     // skip non-zero quads
     for ( ; index < limit && quad_wrap(&val[index]) != 0; index += 2)
     ;
-    
+
     cur_start = index;
     for (index += 2; index < limit && quad_wrap(&val[index]) == 0; index += 2)
     ;
-    
+
     int cur_len = (index - cur_start) / 2;
     if (cur_len > length)
     {
@@ -365,7 +365,7 @@ void find_longest_0_quad_sequence(uint8_t const val[], int& start, int& length)
       length = cur_len;
     }
   }
-  
+
   if (length < 2)
   {
     length = 0;
@@ -385,9 +385,9 @@ void find_longest_0_quad_sequence(uint8_t const val[], int& start, int& length)
 void str_canonical(uint8_t const val[], char delim, std::ostream& os, std::size_t size)
 {
   int zero_start, zero_length = size;
-  
+
   find_longest_0_quad_sequence(val, zero_start, zero_length);
-  
+
   if (zero_start == -1)
   {
     for (int i = 0; i < size; i += 2)
@@ -400,7 +400,7 @@ void str_canonical(uint8_t const val[], char delim, std::ostream& os, std::size_
   else
   {
     int i;
-    
+
     for (i = 0; i < zero_start; i += 2)
     {
       if (i > 0)
@@ -427,9 +427,9 @@ void str_canonical(uint8_t const val[], char delim, std::ostream& os, std::size_
 
 void str_expanded(uint8_t const val[], std::ostream& os, std::size_t size)
 {
-  
+
   os << quad_wrap(&val[0]);
-  
+
   for (int i = 2; i < size; i += 2)
   {
     os << ':';
@@ -491,13 +491,13 @@ cool::net::ipv6::binary_t _parse(std::istream& is)
   int index = 0;
   int post_compress_index = 0;
   bool loop = true;
-  
+
   while (loop)
   {
     c = is.get();
     if (is.eof())
       break;
-    
+
     switch (c)
     {
       case '[':
@@ -506,7 +506,7 @@ cool::net::ipv6::binary_t _parse(std::istream& is)
         else
           throw exception::illegal_state("Unexpected '[' in input stream");
         break;
-        
+
       case ':':
       case '-':
         if (delim == '?')
@@ -525,15 +525,15 @@ cool::net::ipv6::binary_t _parse(std::istream& is)
           compress_begin = true;
         }
         break;
-        
+
       case '.': // seems to be dotted-quad ... some damage was already done, undo it
-        if (delim == '-')  // ... but can't   have it with Microsoft notation
+        if (delim == '-')  // ... but can't have it with Microsoft notation
         {
           is.unget();
           loop = false;
           break;
         }
-        
+
         {
           int quad_val;
           // 1. one quad too many is already stored in one of binary buffers,
@@ -557,7 +557,7 @@ cool::net::ipv6::binary_t _parse(std::istream& is)
           ss << std::hex << quad_val << '.';
           for (c = is.get(); !is.eof() && (c == '.' || (c >= '0' && c <= '9')); c = is.get())
             ss << c;
-          
+
           cool::net::ipv4::host addr;
           ipv4::parse(ss, addr);
           if (post_compress)
@@ -576,7 +576,7 @@ cool::net::ipv6::binary_t _parse(std::istream& is)
         else
           throw exception::illegal_state("unexpected ']' in input stream");
         break;
-        
+
       default:
         compress_begin = false;
         is.unget();
@@ -623,7 +623,7 @@ void parse(std::istream& is, cool::net::ipv6::network& val)
   }
   else if (!is.eof())
     is.unget();
-  
+
   val =  cool::net::ipv6::network(mask, addr);
 }
 
@@ -634,7 +634,7 @@ void parse(std::istream& is, ip::address& val)
   else
     parse(is, dynamic_cast<cool::net::ipv6::network&>(val));
 }
-  
+
 } // namespace
 
 } // namespace entrails
@@ -691,10 +691,10 @@ bool host::equals(const ip::address &other) const
 {
   if (kind() != other.kind())
     return false;
-  
+
   if (other.version() == version())
     return m_data == other;
-  
+
   // special treatment for IPv4 mapped addresses
   if (kind() == ip::HostAddress)
   {
@@ -706,7 +706,7 @@ bool host::equals(const ip::address &other) const
 
 void host::visualize(std::ostream& os) const
 {
-  // Statless IP/ICMP Translation prefixed addresses are shown in
+  // Stateless IP/ICMP Translation prefixed addresses are shown in
   // quad-dotted format
   if (in(rfc_ipv4map) || in(rfc_ipv4translate))
     visualize(os, DottedQuad);
@@ -717,12 +717,12 @@ void host::visualize(std::ostream& os) const
 host::operator struct in_addr() const
 {
   struct in_addr result;
-  
+
   if (in(rfc_ipv4map) || in(rfc_ipv4translate))
     ::memcpy(static_cast<void*>(&result), m_data+12, 4);
   else
     throw exception::illegal_argument("Not an IPv4 mapped address");
-  
+
   ::memcpy(static_cast<void*>(&result), m_data+12, 4);
   return result;
 }
@@ -730,7 +730,7 @@ host::operator struct in_addr() const
 host::operator struct in6_addr() const
 {
   struct in6_addr result;
-  
+
   ::memcpy(static_cast<void*>(&result), m_data, m_data.size());
   return result;
 }
@@ -749,21 +749,21 @@ void host::visualize(std::ostream& os, Style style) const
     case Canonical:
       visualize(os);
       break;
-      
+
     case Expanded:
       entrails::ipv6::str_expanded(m_data, os, 16);
       break;
-      
+
     case Microsoft:
       entrails::ipv6::str_microsoft(m_data, os, 16);
       break;
-      
+
     case DottedQuad:
       entrails::ipv6::str_canonical(m_data, ':', os, 12);
       os << ':';
       entrails::ipv4::str(&m_data[12], os);
       break;
-      
+
     default:
       break;
   }
@@ -792,7 +792,7 @@ void host::assign(const ip::address& val)
     case ip::IPv6:
       m_data = val;
       break;
-        
+
     case ip::IPv4:
       m_data = rfc_ipv4map;
       ::memcpy(&m_data[size() - val.size()], val, val.size());
@@ -804,7 +804,7 @@ ip::address& host::operator =(const std::string& arg)
 {
   std::stringstream ss(arg);
   auto aux = *this;
-  
+
   try { ss >> *this; }
   catch (...) { *this = aux; throw; }
 
@@ -874,7 +874,7 @@ network::network(const std::string& str) : m_length(0)
   // NOTE: parser takes care not to corrupt existing values upon error.
   //       Since it does copy construction it also applies the mask
   std::stringstream ss(str);
-  
+
   ss >> *this;
 }
 
@@ -892,7 +892,7 @@ bool network::equals(const ip::address &other) const
     return false;
   return m_data == other && m_length == dynamic_cast<const network&>(other).m_length;
 }
-  
+
 network::operator std::string() const
 {
   std::stringstream ss;
@@ -903,18 +903,18 @@ network::operator std::string() const
 network::operator struct in6_addr() const
 {
   struct in6_addr result;
-    
+
   ::memcpy(static_cast<void*>(&result), m_data, m_data.size());
   return result;
 }
-  
+
 void network::assign(const ip::address& data)
 {
   if (kind() != data.kind() || version() != data.version())
     throw exception::illegal_argument("Can only assign ipv6::network object.");
   m_data = data;
   m_length = dynamic_cast<const network&>(data).m_length;
-  
+
   // zero host part of the address
   m_data = m_data & entrails::calculate_mask<16>(m_length);
 }
@@ -931,10 +931,10 @@ ip::address& network::operator =(const std::string& arg)
 {
   std::stringstream ss(arg);
   auto aux = *this;
-  
+
   try { ss >> *this; }
   catch (...) { *this = aux; throw; }
-  
+
   if (m_length > size() * 8)
   {
     *this = aux;
@@ -961,7 +961,7 @@ bool network::is(ip::Attribute a) const
   }
   return false;
 }
-  
+
 
 
 bool network::in(const ip::network& net) const
@@ -975,7 +975,7 @@ bool network::has(const ip::address& other) const
 {
   if (version() != other.version())
     return false;
-  
+
   return m_data == (entrails::calculate_mask<16>(m_length) & other);
 }
 
@@ -1002,7 +1002,7 @@ namespace ipv4 {
 host::host(const std::string& str)
 {
   std::stringstream ss(str);
-  
+
   ss >> *this;
 }
 
@@ -1039,17 +1039,17 @@ bool host::equals(const ip::address &other) const
 {
   if (kind() != other.kind())
     return false;
-    
+
   if (other.version() == version())
     return m_data == other;
-    
+
   // special treatment for IPv4 mapped addresses
   if (kind() == ip::HostAddress)
   {
     if (other.in(ipv6::rfc_ipv4map) || other.in(ipv6::rfc_ipv4translate))
       return ::memcmp(m_data, other + 12, 4) == 0;
   }
-  
+
   return false;
 }
 
@@ -1067,7 +1067,7 @@ ip::address& host::operator =(const in_addr& data)
 ip::address& host::operator =(const in6_addr& data)
 {
   ipv6::host aux = ipv6::host(data);
-  
+
   if (!(aux.in(ipv6::rfc_ipv4map) || aux.in(ipv6::rfc_ipv4translate)))
     throw exception::illegal_argument("address is not IPv4 host address mapped to IPv6");
   m_data = static_cast<const uint8_t*>(static_cast<const void*>(&data)) + 12;
@@ -1077,20 +1077,20 @@ ip::address& host::operator =(const in6_addr& data)
 host::operator struct in_addr() const
 {
   struct in_addr result;
-    
+
   ::memcpy(static_cast<void*>(&result), m_data, m_data.size());
   return result;
 }
-  
+
 host::operator struct in6_addr() const
 {
   struct in6_addr result;
-    
+
   ::memcpy(static_cast<void*>(&result), ipv6::rfc_ipv4map, 12);
   ::memcpy(static_cast<uint8_t*>(static_cast<void*>(&result)) + 12, m_data, 4);
   return result;
 }
-  
+
 
 host::operator std::string() const
 {
@@ -1103,7 +1103,7 @@ ip::address& host::operator =(const std::string& arg)
 {
   std::stringstream ss(arg);
   auto aux = *this;
-  
+
   try { ss >> *this; }
   catch (...) { *this = aux; throw; }
 
@@ -1119,7 +1119,7 @@ void host::assign(const ip::address& val)
     case ip::IPv4:
       m_data = val;
       break;
-      
+
     case ip::IPv6:
       if (!(val.in(ipv6::rfc_ipv4map) || val.in(ipv6::rfc_ipv4translate)))
         throw exception::illegal_argument("Cannot assign IPv6 host address");
@@ -1150,12 +1150,12 @@ bool host::in(const ip::network& net) const
 {
   if (version() != net.version())
     return false;
-  
+
   return net.has(*this);
 }
 
 // ============= network class
-  
+
 
 network::network(std::size_t mask_size, uint8_t const data[])
     : m_data(data)
@@ -1190,7 +1190,7 @@ network::network(const std::string& str) : m_length(0)
   // NOTE: parser takes care not to corrupt existing values upon error.
   //       Since it does copy construction it also applies the mask
   std::stringstream ss(str);
-  
+
   ss >> *this;
 }
 
@@ -1231,7 +1231,7 @@ ip::address& network::operator =(const in_addr& data)
 network::operator struct in_addr() const
 {
   struct in_addr result;
-    
+
   ::memcpy(static_cast<void*>(&result), m_data, m_data.size());
   return result;
 }
@@ -1240,10 +1240,10 @@ ip::address& network::operator =(const std::string& arg)
 {
   std::stringstream ss(arg);
   auto aux = *this;
-  
+
   try { ss >> *this; }
   catch (...) { *this = aux; throw; }
-  
+
   if (m_length > size() * 8)
   {
     *this = aux;
@@ -1270,7 +1270,7 @@ bool network::is(ip::Attribute a) const
   }
   return false;
 }
-  
+
 
 void network::assign(const ip::address& data)
 {
@@ -1284,10 +1284,10 @@ bool network::in(const ip::network& net) const
 {
   if (version() != net.version())
     return false;
-    
+
   return net.has(*this);
 }
-  
+
 bool network::has(const ip::address& other) const
 {
   if (version() != other.version())
@@ -1296,7 +1296,7 @@ bool network::has(const ip::address& other) const
   return m_data == (entrails::calculate_mask<4>(m_length) & other);
 }
 
-  
+
 } // namespace ipv4
 
 } } // namespace
