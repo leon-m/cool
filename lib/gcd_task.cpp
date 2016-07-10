@@ -30,9 +30,24 @@
 #include "cool/gcd_async.h"
 
 namespace cool { namespace gcd { namespace task {
-
 namespace entrails
 {
+
+taskinfo::taskinfo(const std::weak_ptr<runner>& r)
+  : m_runner(r)
+  , m_next(nullptr)
+  , m_prev(nullptr)
+{
+  m_u.task = nullptr;
+}
+
+taskinfo::taskinfo(entrails::task_t* t, const std::weak_ptr<runner>& r)
+    : m_runner(r)
+    , m_next(nullptr)
+    , m_prev(nullptr)
+{
+  m_u.task = t;
+}
 
 void cleanup_reverse(taskinfo* info_)
 {

@@ -63,20 +63,8 @@ using error_handler_t = std::function<void(const std::exception_ptr&)>;
 
 struct taskinfo
 {
-  taskinfo(const std::weak_ptr<runner>& r)
-    : m_runner(r)
-    , m_next(nullptr)
-    , m_prev(nullptr)
-  {
-    m_u.task = nullptr;
-  }
-  taskinfo(entrails::task_t* t, const std::weak_ptr<runner>& r)
-      : m_runner(r)
-      , m_next(nullptr)
-      , m_prev(nullptr)
-  {
-    m_u.task = t;
-  }
+  dlldecl taskinfo(const std::weak_ptr<runner>& r);
+  dlldecl taskinfo(entrails::task_t* t, const std::weak_ptr<runner>& r);
   dlldecl ~taskinfo();
 
   union {
@@ -125,14 +113,22 @@ template <typename ResultT> class task_entry
     try
     {
       ResultT result = task_();               // execute the current task
-      if (next != nullptr && next->m_u.subtask != nullptr)
+      if (next != nullptr)
       {
-        // bind result to partially bound subtask
-        binder_t<ResultT>* subtask = static_cast<binder_t<ResultT>*>(next->m_u.subtask);
-        next->m_u.task = (*subtask)(result);  // rebind
-        delete subtask;
-        next->m_deleter = task_t();           // disarm subtask deleter
-        kickstart(next);                      // schedule next task
+        if (next->m_u.subtask != nullptr)
+        {
+          // bind result to partially bound subtask
+          binder_t<ResultT>* subtask = static_cast<binder_t<ResultT>*>(next->m_u.subtask);
+          next->m_u.task = (*subtask)(result);  // rebind
+          delete subtask;
+          next->m_deleter = task_t();           // disarm subtask deleter
+          kickstart(next);                      // schedule next task
+        }
+        else
+        {
+          // finally task but exception was not thrown, clean it up
+          cleanup(next);
+        }
       }
     }
     catch (...)
@@ -156,14 +152,22 @@ template<> class task_entry<void>
     try
     {
       task_();  // execute the current task
-      if (next != nullptr && next->m_u.subtask != nullptr)
+      if (next != nullptr)
       {
-        // no rebind necessary, just reassign and disarm deleter
-        void_binder_t* subtask = static_cast<void_binder_t*>(next->m_u.subtask);
-        next->m_u.task = (*subtask)();        // rebind
-        delete subtask;
-        next->m_deleter = task_t();           // disarm subtask deleter
-        kickstart(next);                      // schedule next task
+        if (next->m_u.subtask != nullptr)
+        {
+          // no rebind necessary, just reassign and disarm deleter
+          void_binder_t* subtask = static_cast<void_binder_t*>(next->m_u.subtask);
+          next->m_u.task = (*subtask)();        // rebind
+          delete subtask;
+          next->m_deleter = task_t();           // disarm subtask deleter
+          kickstart(next);                      // schedule next task
+        }
+        else
+        {
+          // finally task but exception was not thrown, clean it up
+          cleanup(next);
+        }
       }
     }
     catch (...)
