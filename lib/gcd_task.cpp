@@ -37,14 +37,16 @@ taskinfo::taskinfo(const std::weak_ptr<runner>& r)
   : m_runner(r)
   , m_next(nullptr)
   , m_prev(nullptr)
+  , m_is_on_exception(false)
 {
   m_u.task = nullptr;
 }
 
 taskinfo::taskinfo(entrails::task_t* t, const std::weak_ptr<runner>& r)
-    : m_runner(r)
-    , m_next(nullptr)
-    , m_prev(nullptr)
+  : m_runner(r)
+  , m_next(nullptr)
+  , m_prev(nullptr)
+  , m_is_on_exception(false)
 {
   m_u.task = t;
 }
