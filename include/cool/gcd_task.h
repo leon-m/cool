@@ -463,6 +463,9 @@ template <typename Result> class task
   }
 
   /**
+   * @deprecated
+   * Deprecated in favor of  @ref then_do() and @ref on_exception() or @ref on_any_exception()
+   *
    * Adds a new task to the sequence and returns it.
    *
    * This method template adds a new task to be scheduled for execution upon
@@ -503,8 +506,10 @@ template <typename Result> class task
    *   object.
    *
    * @note Note that since all @ref then() methods invalidate the current and
-   *   return a new task object, the used runner will the last runner explicitly
-   *   passed to any preceding task through @ref then(), or the runner specified
+   *   return a new task object,
+   *   the runner used will be the last runner explicitly
+   *   passed to any preceding task through @ref then(), @ref then_do(),
+   *   @ref on_exception(), @ref on_any_exception() or the runner specified
    *   at @ref factory::create() if none.
    *
    * @warning The error handler @c err is scheduled for the execution
@@ -532,6 +537,9 @@ template <typename Result> class task
   }
 #endif
   /**
+   * @deprecated
+   * Deprecated in favor of  @ref then_do() and @ref on_exception() or @ref on_any_exception()
+   *
    * Adds a new task to the sequence and returns it.
    *
    * This method template adds a new task to be scheduled for execution upon
@@ -588,6 +596,141 @@ template <typename Result> class task
   then(const std::weak_ptr<runner>& runner_, const error_handler_t &err_, Function &&func_, Args&&... args_)
 #endif
   {
+    if (m_info == nullptr)
+      throw cool::exception::illegal_state("this task object is in undefined state");
+
+    auto task = then_do(runner_, std::forward<Function>(func_)
+#if !defined(INCORRECT_VARIADIC)
+        , std::forward<Args>(args_)...
+#endif
+    );
+
+    task.m_info->m_eh = err_;
+
+    return task;
+  }
+
+  /**
+   * Adds a new task to the sequence and returns it.
+   *
+   * This method template adds a new task to be scheduled for execution upon
+   * the completion of this task. The new task is passed the return value
+   * of this task as its first parameter. The template parameters,
+   * auto-deducted by compiler's template parameter deduction rules that apply
+   * to function templates, are the following:
+   * @tparam Function the function type of the user supplied task (Callable object).
+   *    If the return value type of this task is non-void, the Callable's first
+   *    argument must be @c const @c ResultT&, where ResultT is the type of the
+   *    return value of this task's Callable.
+   * @tparam Args... the template parameter pack of additional arguments passed to
+   *    the user supplied Callable, after the optional first argument.
+   *
+   * The method must be provided with the following parameters:
+   * @param func_ the user supplied Callable to be scheduled for execution upon
+   *    the successful completion of this task.
+   * @param args_ additional arguments to be passed to the user provided
+   *    Callable when it begins the execution. Note that the additional arguments
+   *    are passed after the first argument, if the current task's return value
+   *    is non-void, or as the first, second, etc. argument if it is void.
+   *
+   * @return a new task object, which is to be used from this point on instead
+   *    of the current task object.
+   *
+   * If the current task throws an exception during its execution, the task
+   * library will schedule the first error handler that follows the current task.
+   * Error handlers are specified as parameters in @ref then(), @ref on_exception() and
+   * @ref on_any_exception() methods. If the current task throws an exception then
+   * the user provided Callable @c func_  will not be scheduled.
+   *
+   * If the current task does not
+   * throw an exception, the task library will schedule @c func_ for execution,
+   * optionally passing it a return value of the current task (if non-void).
+   * @c func_ will be scheduled to run on the same @ref cool::gcd::task::runner "runner"
+   * that ran the current task.
+   *
+   * @note This method invalidates the current (@c this) object, and returns
+   *    a new task object. All further operations must be performed on a new
+   *    object.
+   *
+   * @note Note that since all @ref then_do() methods invalidate the current and
+   *   return a new task object,
+   *   the runner used will be the last runner explicitly
+   *   passed to any preceding task through @ref then(), @ref then_do(),
+   *   @ref on_exception(), @ref on_any_exception() or the runner specified
+   *   at @ref factory::create() if none.
+   */
+#if defined(INCORRECT_VARIADIC)
+  template <typename Function>
+  task<typename std::result_of<Function(const Result&)>::type>
+  then_do(Function &&func_)
+#else
+  template <typename Function, typename... Args>
+  task<typename std::result_of<Function(const Result&, Args...)>::type>
+  then_do(Function &&func_, Args&&... args_)
+#endif
+  {
+    if (m_info == nullptr)
+      throw cool::exception::illegal_state("this task object is in undefined state");
+    return then_do(m_info->m_runner, std::forward<Function>(func_)
+#if !defined(INCORRECT_VARIADIC)
+        , std::forward<Args>(args_)...
+#endif
+    );
+  }
+
+  /**
+   * Adds a new task to the sequence and returns it.
+   *
+   * This method template adds a new task to be scheduled for execution upon
+   * the completion of this task. The new task is passed the return value
+   * of this task as its first parameter. The template parameters,
+   * auto-deducted by compiler's template parameter deduction rules that apply
+   * to function templates, are the following:
+   * @tparam Function the function type of the user supplied task (Callable object).
+   *    If the return value type of this task is non-void, the Callable's first
+   *    argument must be @c const @c ResultT&, where ResultT is the type of the
+   *    return value of this task's Callable.
+   * @tparam Args... the template parameter pack of additional arguments passed to
+   *    the user supplied Callable, after the optional first argument.
+   *
+   * The method must be provided with the following parameters:
+   * @param runner_ the @ref cool::gcd::task::runner "runner" to run the @c func_ Callable.
+   * @param func_ the user supplied Callable to be scheduled for execution upon
+   *    the successful completion of this task.
+   * @param args_ additional arguments to be passed to the user provided
+   *    Callable when it begins the execution. Note that the additional arguments
+   *    are passed after the first argument, if the current task's return value
+   *    is non-void, or as the first, second, etc. argument if it is void.
+   *
+   * @return a new task object, which is to be used from this point on instead
+   *    of the current task object.
+   *
+   * If the current task throws an exception during its execution, the task
+   * library will schedule the first error handler that follows the current task.
+   * Error handlers are specified as parameters in @ref then(), @ref on_exception() and
+   * @ref on_any_exception() methods. If the current task throws an exception then
+   * the user provided Callable @c func_  will not be scheduled.
+   *
+   * If the current task does not
+   * throw an exception, the task library will schedule @c func_ for execution,
+   * optionally passing it a return value of the current task (if non-void).
+   * @c func_ will be scheduled to run on the same @ref cool::gcd::task::runner "runner"
+   * that ran the current task.
+   *
+   * @note This method invalidates the current (@c this) object, and returns
+   *    a new task object. All further operations must be performed on a new
+   *    object.
+   */
+#if defined(INCORRECT_VARIADIC)
+  template <typename Function>
+  task<typename std::result_of<Function(const Result&)>::type>
+  then_do(const std::weak_ptr<runner>& runner_, Function &&func_)
+#else
+  template <typename Function, typename... Args>
+  task<typename std::result_of<Function(const Result&, Args...)>::type>
+  then_do(const std::weak_ptr<runner>& runner_, Function &&func_, Args&&... args_)
+#endif
+  {
 #if defined(INCORRECT_VARIADIC)
     using subtask_result_t = typename std::result_of<Function(const Result&)>::type;
 #else
@@ -599,7 +742,6 @@ template <typename Result> class task
       throw cool::exception::illegal_state("this task object is in undefined state");
 
     entrails::taskinfo* aux = new entrails::taskinfo(runner_);
-    aux->m_eh = err_;
     m_info->m_next = aux;  // double link
     aux->m_prev = m_info;
 
@@ -624,19 +766,216 @@ template <typename Result> class task
   }
 
   /**
-   * Specifies the error handling task for the current task.
+   * Specifies the error handling task for any type of exception.
    *
-   * The error handler for the current task is a new task that is run only
-   * if the current task throws an exception during its execution. The error
-   * handling task is run by the same runner which executed the current
-   * task.
+   * The error handler is a new task that is run only if current task or any of the
+   * previous tasks threw an exception that is not yet handled. The task library will
+   * schedule the first error handler that follows the task that threw an exception
+   * and is able to handle the thrown exception.
+   *
+   * The @c err_ function must accept the thrown exception as parameter and either
+   * handle the exception by returning a result of the same type as current task or
+   * throw the same or another exception. If the @c err_ function throws an exception then
+   * the task library will schedule the next error handler.
+   *
+   * The method must be provided with the following parameters:
+   * @param err_ the user supplied Callable to be scheduled for execution upon exception
+   *    being thrown in any of the preceding tasks.
+   *
+   * @note This method invalidates the current (@c this) object, and returns
+   *    a new task object. All further operations must be performed on a new
+   *    object.
+   *
+   * @note Note that the runner used will be the last runner explicitly
+   *   passed to any preceding task through @ref then(), @ref then_do(),
+   *   @ref on_exception(), @ref on_any_exception() or the runner specified
+   *   at @ref factory::create() if none.
+   *
+   * @note This method, if used, does not finalize the task sequence. It is
+   *   possible to append additional tasks on the task returned by this method.
+   */
+  task<Result>
+  on_any_exception(std::function<Result(const std::exception_ptr&)>&& err_)
+  {
+    if (m_info == nullptr)
+      throw cool::exception::illegal_state("this task object is in undefined state");
+    return on_any_exception(m_info->m_runner, std::forward<std::function<Result(const std::exception_ptr&)>>(err_));
+  }
+
+  /**
+   * Specifies the error handling task for any type of exception.
+   *
+   * The error handler is a new task that is run only if current task or any of the
+   * previous tasks threw an exception that is not yet handled. The task library will
+   * schedule the first error handler that follows the task that threw an exception
+   * and is able to handle the thrown exception.
+   *
+   * The @c err_ function must accept the thrown exception as parameter and either
+   * handle the exception by returning a result of the same type as current task or
+   * throw the same or another exception. If the @c err_ function throws an exception then
+   * the task library will schedule the next error handler.
+   *
+   * The method must be provided with the following parameters:
+   * @param runner_ the @ref cool::gcd::task::runner "runner" to run the @c err_ Callable.
+   * @param err_ the user supplied Callable to be scheduled for execution upon exception
+   *    being thrown in any of the preceding tasks.
+   *
+   * @note This method invalidates the current (@c this) object, and returns
+   *    a new task object. All further operations must be performed on a new
+   *    object.
+   *
+   * @note This method, if used, does not finalize the task sequence. It is
+   *   possible to append additional tasks on the task returned by this method.
+   */
+  task<Result>
+  on_any_exception(const std::weak_ptr<runner>& runner_, std::function<Result(const std::exception_ptr&)>&& err_)
+  {
+    if (m_info == nullptr)
+      throw cool::exception::illegal_state("this task object is in undefined state");
+
+    entrails::taskinfo* aux = entrails::on_any_exception<Result>(runner_, std::forward<std::function<Result(const std::exception_ptr&)>>(err_));
+    m_info->m_next = aux;  // double link
+    aux->m_prev = m_info;
+    m_info = nullptr;     // invalidate state of current task
+
+    return task<Result>(aux);
+  }
+
+  /**
+   * Specifies the error handling task handling a particular type of exception
+   *
+   * The error handler is a new task that is run only if current task or any of the
+   * previous tasks threw an exception that is not yet handled. The task library will
+   * schedule the first error handler that follows the task that threw an exception
+   * and is able to handle the thrown exception.
+   * Task returned by this method will be scheduled only if type of exception that
+   * @c err_ function accepts as parameter is the base class of the thrown exception.
+   *
+   * The @c err_ function must handle the exception passed as parameter and either
+   * handle the exception by returning a result of the same type as current task or
+   * throw the same or another exception. If the @c err_ function throws an exception then
+   * the task library will schedule the next error handler that is able to handle it.
+   *
+   * The template parameters,
+   * auto-deducted by compiler's template parameter deduction rules that apply
+   * to function templates, are the following:
+   * @tparam Function the function type of the user supplied function (Callable object).
+   *    If the return value type of this task is non-void, then the Callable's return
+   *    type must be the same as the @c ResultT, where ResultT is the type of the
+   *    return value of this task's Callable.
+   *    the Callable's only parameter must be @c const @c ExceptionT&, where ExceptionT
+   *    is the type of the exception that the Callable @err_ can handle.
+   *
+   * The method must be provided with the following parameters:
+   * @param err_ the user supplied Callable to be scheduled for execution upon exception
+   *    being thrown in any of the preceding tasks.
+   *
+   * This method is provided as utility when only one particular exception type needs to
+   * be handled. For example instead of writing:
+   * @code
+   *   task.on_any_exception([](const std::exception_ptr& p_ex)
+   *   {
+   *     try {
+   *       std::rethrow_exception(p_ex);
+   *     }
+   *     catch (const ExceptionT& ex) {
+   *       ...
+   *       return result;
+   *     }
+   *   };
+   * @endcode
+   *
+   * The same can be achieved by:
+   * @code
+   *   task.on_exception([](const ExceptioT& ex)
+   *   {
+   *     ...
+   *     return result;
+   *   };
+   * @endcode
+   *
+   * @note This method invalidates the current (@c this) object, and returns
+   *    a new task object. All further operations must be performed on a new
+   *    object.
+   *
+   * @note Note that the runner used will be the last runner explicitly
+   *   passed to any preceding task through @ref then(), @ref then_do(),
+   *   @ref on_exception(), @ref on_any_exception() or the runner specified
+   *   at @ref factory::create() if none.
+   *
+   * @note This method, if used, does not finalize the task sequence. It is
+   *   possible to append additional tasks on the task returned by this method.
+   *
+   * @note std::rethrow_exception is executed whenever on_exception task is
+   * examined if it can handle the thrown exception. Therefore use the
+   * @ref on_any_exception with multiple catch clauses when several exception
+   * types are to be handled
+   */
+  template <typename Function>
+  task<Result>
+  on_exception(Function&& err_)
+  {
+    static_assert(
+        std::is_same<typename traits::info<Function>::result, Result>::value,
+        "Return type of on_exception handler must be the same as preceding task.");
+
+    static_assert(
+        std::is_same<typename traits::info<Function>::has_one_arg, std::true_type>::value,
+        "on_exception handler must have exactly one parameter.");
+
+    if (m_info == nullptr)
+      throw cool::exception::illegal_state("this task object is in undefined state");
+    return on_exception(m_info->m_runner, std::forward<Function>(err_));
+  }
+
+  /**
+   * Specifies the error handling task handling a particular type of exception
+   *
+   * Same as @ref task<Result>::on_exception(Function&& err_) except that this
+   * method provides additional parameter to specify the
+   * @ref cool::gcd::task::runner "runner" to run the @c err_ Callable.
+   */
+  template <typename Function>
+  task<Result>
+  on_exception(const std::weak_ptr<runner>& runner_, Function&& err_)
+  {
+    static_assert(
+        std::is_same<typename traits::info<Function>::result, Result>::value,
+        "Return type of on_exception handler must be the same as preceding task.");
+
+    static_assert(
+        std::is_same<typename traits::info<Function>::has_one_arg, std::true_type>::value,
+        "on_exception handler must have exactly one parameter.");
+
+    if (m_info == nullptr)
+      throw cool::exception::illegal_state("this task object is in undefined state");
+
+    using exception_t = typename std::decay<typename traits::info<Function>::first_arg>::type;
+
+    entrails::taskinfo* aux = entrails::on_exception<Result, exception_t>(runner_, std::forward<Function>(err_));
+    m_info->m_next = aux; // double link
+    aux->m_prev = m_info;
+    m_info = nullptr;     // invalidate state of current task
+
+    return task<Result>(aux);
+  }
+
+  /**
+   * Specifies the final error handling task.
+   *
+   * The error handler is a new task that is run only if current task or any of the
+   * previous tasks threw an exception that is not yet handled. The task library will
+   * schedule the first error handler that follows the task that threw an exception
+   * and is able to handle the thrown exception.
    *
    * @note This method invalidates the current (@c this) object, and returns
    *   a new task object. All further operations must be performed on a new
    *   object.
    * @note Note that since all @ref then() methods invalidate the current and
-   *   return a new task object, the used runner will the last runner explicitly
-   *   passed to any preceding task through @ref then(), or the runner specified
+   *   return a new task object,
+   *   the runner used will be the last runner explicitly
+   *   passed to any preceding task through @ref then(), @ref then_do(),
+   *   @ref on_exception(), @ref on_any_exception() or the runner specified
    *   at @ref factory::create() if none.
    *
    * @note This method, if used, finalizes the task sequence. Although it is
@@ -651,11 +990,12 @@ template <typename Result> class task
   }
 
   /**
-   * Specifies the error handling task for the current task.
+   * Specifies the final error handling task.
    *
-   * The error handler for the current task is a new task that is run only
-   * if the current task throws an exception during its execution. The error
-   * handling task is run by the runner specified by @c runner_ parameter.
+   * The error handler is a new task that is run only if current task or any of the
+   * previous tasks threw an exception that is not yet handled. The task library will
+   * schedule the first error handler that follows the task that threw an exception
+   * and is able to handle the thrown exception.
    *
    * @note This method invalidates the current (@c this) object, and returns
    *   a new task object. All further operations must be performed on a new
@@ -810,6 +1150,49 @@ template <> class task<void>
   then(const std::weak_ptr<runner>& runner_, const error_handler_t& err_, Function&& func_, Args&&... args_)
 #endif
   {
+    if (m_info == nullptr)
+      throw cool::exception::illegal_state("this task object is in undefined state");
+
+    auto task = then_do(runner_, std::forward<Function>(func_)
+#if !defined(INCORRECT_VARIADIC)
+        , std::forward<Args>(args_)...
+#endif
+    );
+
+    task.m_info->m_eh = err_;
+
+    return task;
+  }
+
+#if defined(INCORRECT_VARIADIC)
+  template <typename Function>
+  task<typename std::result_of<Function()>::type>
+  then_do(Function&& func_)
+#else
+  template <typename Function, typename... Args >
+  task<typename std::result_of<Function(Args...)>::type>
+  then_do(Function&& func_, Args&&... args_)
+#endif
+  {
+    if (m_info == nullptr)
+      throw cool::exception::illegal_state("this task object is in undefined state");
+    return then_do(m_info->m_runner, std::forward<Function>(func_)
+#if !defined(INCORRECT_VARIADIC)
+        , std::forward<Args>(args_)...
+#endif
+    );
+  }
+
+#if defined(INCORRECT_VARIADIC)
+  template <typename Function>
+  task<typename std::result_of<Function()>::type>
+  then_do(const std::weak_ptr<runner>& runner_, Function&& func_)
+#else
+  template <typename Function, typename... Args >
+  task<typename std::result_of<Function(Args...)>::type>
+  then_do(const std::weak_ptr<runner>& runner_, Function&& func_, Args&&... args_)
+#endif
+  {
 #if defined(INCORRECT_VARIADIC)
     using subtask_result_t = typename std::result_of<Function()>::type;
 #else
@@ -821,7 +1204,6 @@ template <> class task<void>
       throw cool::exception::illegal_state("this task object is in undefined state");
 
     entrails::taskinfo* aux = new entrails::taskinfo(runner_);
-    aux->m_eh = err_;
     m_info->m_next = aux;  // double link
     aux->m_prev = m_info;
 
@@ -845,6 +1227,70 @@ template <> class task<void>
 
   }
 
+
+  task
+  on_any_exception(std::function<void(const std::exception_ptr&)>&& err_)
+  {
+    if (m_info == nullptr)
+      throw cool::exception::illegal_state("this task object is in undefined state");
+    return on_any_exception(m_info->m_runner, std::forward<std::function<void(const std::exception_ptr&)>>(err_));
+  }
+
+  task
+  on_any_exception(const std::weak_ptr<runner>& runner_, error_handler_t&& err_)
+  {
+    if (m_info == nullptr)
+      throw cool::exception::illegal_state("this task object is in undefined state");
+
+    entrails::taskinfo* aux = entrails::on_any_exception<void>(runner_, std::forward<error_handler_t>(err_));
+    m_info->m_next = aux;  // double link
+    aux->m_prev = m_info;
+    m_info = nullptr;     // invalidate state of current task
+
+    return task(aux);
+  }
+
+  template <typename Function>
+  task
+  on_exception(Function&& err_)
+  {
+    static_assert(
+        std::is_same<typename traits::info<Function>::result, void>::value,
+        "Return type of on_exception handler must be the same as preceding task.");
+
+    static_assert(
+        std::is_same<typename traits::info<Function>::has_one_arg, std::true_type>::value,
+        "on_exception handler must have exactly one parameter.");
+
+    if (m_info == nullptr)
+      throw cool::exception::illegal_state("this task object is in undefined state");
+    return on_exception(m_info->m_runner, std::forward<Function>(err_));
+  }
+
+  template <typename Function>
+  task
+  on_exception(const std::weak_ptr<runner>& runner_, Function&& err_)
+  {
+    static_assert(
+        std::is_same<typename traits::info<Function>::result, void>::value,
+        "Return type of on_exception handler must be the same as preceding task.");
+
+    static_assert(
+        std::is_same<typename traits::info<Function>::has_one_arg, std::true_type>::value,
+        "on_exception handler must have exactly one parameter.");
+
+    if (m_info == nullptr)
+      throw cool::exception::illegal_state("this task object is in undefined state");
+
+    using exception_t = typename std::decay<typename traits::info<Function>::first_arg>::type;
+
+    entrails::taskinfo* aux = entrails::on_exception<void, exception_t>(runner_, std::forward<Function>(err_));
+    m_info->m_next = aux; // double link
+    aux->m_prev = m_info;
+    m_info = nullptr;     // invalidate state of current task
+
+    return task(aux);
+  }
 
   task finally(const error_handler_t& err_)
   {

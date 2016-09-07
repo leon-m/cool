@@ -29,6 +29,8 @@
 
 #include <dispatch/dispatch.h>
 
+#include "traits.h"
+
 namespace cool { namespace gcd { namespace task {
 
 #if defined(LINUX_TARGET)
@@ -76,6 +78,7 @@ struct taskinfo
   std::weak_ptr<runner>     m_runner;
   taskinfo*                 m_next;
   taskinfo*                 m_prev;
+  bool                      m_is_on_exception; // true if task is on_exception handler
 };
 
 // --- cleanup stuff
@@ -113,6 +116,13 @@ template <typename ResultT> class task_entry
     try
     {
       ResultT result = task_();               // execute the current task
+      // no exception thrown in the task. skip tasks that are exception handlers
+      while (next != nullptr && next->m_is_on_exception)
+      {
+        entrails::taskinfo* aux = next->m_next;
+        delete next;
+        next = aux;
+      }
       if (next != nullptr)
       {
         if (next->m_u.subtask != nullptr)
@@ -133,9 +143,32 @@ template <typename ResultT> class task_entry
     }
     catch (...)
     {
-      if (next != nullptr && next->m_eh)
-        kickstart(next, std::current_exception());
-      cleanup(next);
+      // skip tasks that don't handle exceptions
+      while (next != nullptr && (!next->m_is_on_exception && !next->m_eh))
+      {
+        entrails::taskinfo* aux = next->m_next;
+        delete next;
+        next = aux;
+      }
+      if (next != nullptr)
+      {
+        if (next->m_is_on_exception)
+        {
+          // subtask contains the exception handler that doesn't break the execution of task chain
+          binder_t<const std::exception_ptr&>* subtask = static_cast<binder_t<const std::exception_ptr&>*>(next->m_u.subtask);
+          next->m_u.task = (*subtask)(std::current_exception());  // rebind
+          delete subtask;
+          next->m_deleter = task_t();           // disarm subtask deleter
+          kickstart(next);                      // schedule next task
+        }
+        else
+        {
+          // backward compatibility. error handlers within tasks break the execution of task chain
+          if (next->m_eh)
+            kickstart(next, std::current_exception());
+          cleanup(next);
+        }
+      }
     }
 
     delete info_;
@@ -152,6 +185,13 @@ template<> class task_entry<void>
     try
     {
       task_();  // execute the current task
+      // no exception thrown in the task. skip tasks that are exception handlers
+      while (next != nullptr && next->m_is_on_exception)
+      {
+        entrails::taskinfo* aux = next->m_next;
+        delete next;
+        next = aux;
+      }
       if (next != nullptr)
       {
         if (next->m_u.subtask != nullptr)
@@ -172,9 +212,32 @@ template<> class task_entry<void>
     }
     catch (...)
     {
-      if (next != nullptr && next->m_eh)
-        kickstart(next, std::current_exception());
-      cleanup(next);
+      // skip tasks that don't handle exceptions
+      while (next != nullptr && (!next->m_is_on_exception && !next->m_eh))
+      {
+        entrails::taskinfo* aux = next->m_next;
+        delete next;
+        next = aux;
+      }
+      if (next != nullptr)
+      {
+        if (next->m_is_on_exception)
+        {
+          // subtask contains the exception handler that doesn't break the execution of task chain
+          binder_t<const std::exception_ptr&>* subtask = static_cast<binder_t<const std::exception_ptr&>*>(next->m_u.subtask);
+          next->m_u.task = (*subtask)(std::current_exception());  // rebind
+          delete subtask;
+          next->m_deleter = task_t();           // disarm subtask deleter
+          kickstart(next);                      // schedule next task
+        }
+        else
+        {
+          // backward compatibility. error handlers within tasks break the execution of task chain
+          if (next->m_eh)
+            kickstart(next, std::current_exception());
+          cleanup(next);
+        }
+      }
     }
 
     delete info_;
@@ -387,6 +450,70 @@ public:
   }
 };
 #endif
+
+// ====== on_exception task preparation
+// Prepares the task_info structure for the on_exception tasks.
+// Here is part of code that is common code for task<Result> and task<void>
+
+template <typename Result>
+entrails::taskinfo*
+on_any_exception(const std::weak_ptr<runner>& runner_, std::function<Result(const std::exception_ptr&)>&& err_)
+{
+  using subtask_t = std::function<entrails::task_t*(const std::exception_ptr&)>;
+  using handler_t = std::function<Result(const std::exception_ptr&)>;
+
+  entrails::taskinfo* aux = new entrails::taskinfo(runner_);
+  aux->m_is_on_exception = true;
+
+  aux->m_u.subtask = new subtask_t(std::bind(
+          entrails::subtask_binder<const std::exception_ptr&, Result, handler_t
+        >::rebind
+        , aux
+        , std::placeholders::_1
+        , std::forward<handler_t>(err_)
+  ));
+
+  aux->m_deleter = std::bind(entrails::subtask_deleter<subtask_t>, aux->m_u.subtask);
+
+  return aux;
+}
+
+template <typename Result, typename Exception>
+entrails::taskinfo*
+on_exception(const std::weak_ptr<runner>& runner_, std::function<Result(Exception)>&& err_)
+{
+  using subtask_t = std::function<entrails::task_t*(const std::exception_ptr&)>;
+  using handler_t = std::function<Result(const std::exception_ptr&)>;
+  using exception_t = typename std::decay<Exception>::type;
+
+  entrails::taskinfo* aux = new entrails::taskinfo(runner_);
+  aux->m_is_on_exception = true;
+
+  handler_t err_tc = [err_](const std::exception_ptr& p_ex)
+  {
+    try {
+      std::rethrow_exception(p_ex);
+    }
+    catch (const exception_t& ex) {
+      // catch the exception that err_ handles. Other exception types are not caught
+      // therefore other tasks that follow this one will get a chance to handle them.
+      return err_(ex);
+    }
+  };
+
+  aux->m_u.subtask = new subtask_t(std::bind(
+          entrails::subtask_binder<const std::exception_ptr&, Result, handler_t
+        >::rebind
+        , aux
+        , std::placeholders::_1
+        , err_tc
+  ));
+
+  aux->m_deleter = std::bind(entrails::subtask_deleter<subtask_t>, aux->m_u.subtask);
+
+  return aux;
+}
+
 
 struct queue
 {
