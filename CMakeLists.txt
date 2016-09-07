@@ -199,6 +199,12 @@ set (TESTS
    runner
 )
 
+if( NOT WIN32 )
+  set (TESTS ${TESTS}
+    reader_writer
+  )
+endif()
+
 # --- Doxygen documentation
 
 if (COOL_BUILD_DOC)

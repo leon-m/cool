@@ -139,6 +139,8 @@ void writer::write_cb(int fd, std::size_t n)
   }
 }
 
+// NOTE: below dup is necessary as ubuntu 16.04 does not run read and
+// write event sources on the same file descriptor
 reader_writer::reader_writer(int fd,
                              const task::runner& run,
                              const reader::handler_t& rd_cb,
@@ -146,7 +148,7 @@ reader_writer::reader_writer(int fd,
                              const writer::err_handler_t& err_cb,
                              bool owner)
     : m_rd(fd, run, rd_cb, owner)
-    , m_wr(fd, run, wr_cb, err_cb, false)
+    , m_wr(::dup(fd), run, wr_cb, err_cb, true)
 { /* noop */ }
 #endif
 // --------------------------------------------------------------------------
