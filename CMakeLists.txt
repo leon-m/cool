@@ -17,8 +17,14 @@ cmake_minimum_required(VERSION 2.8)
 # Output variables:
 #  COOL_LIBS         cool library and dependent libraries
 #  COOL_INCLUDE_DIR  include path for cool header files
+#  COOL_VERSION      version number
+#  COOL_SOVERSION    SOVERSION of the dynamic library (for Unixy platforms)
 #
 ## #######################################################################
+
+# version number and SOVERSION
+set (COOL_VERSION "0.0.0")
+set (COOL_SOVERSION "0")
 
 # defaults if input variables aren't set
 
@@ -80,7 +86,7 @@ elseif (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
   message("   Build COOL library on Microsoft Windows from ${COOL_HOME}")
   set (TARGET WIN32_TARGET)
   set (WIN32 true)
-  set (xdispatch_DIR externals/xdispatch)  
+  set (xdispatch_DIR externals/xdispatch)
 else()
   message("*********************** Unknown platform, expect errors")
   error("Told you so")
@@ -97,17 +103,20 @@ message ("-- Build documentation: ${COOL_BUILD_DOC}")
 
 # set output variables
 if (OSX)
-  set (COOL_LIBS cool)
+  set (COOL_LINK_LIBRARIES)
 elseif(LINUX)
-  set (COOL_LIBS cool dispatch pthread)
+  set (COOL_LINK_LIBRARIES dispatch pthread)
 else()
-  set (COOL_LIBS cool dispatch)
+  set (COOL_LINK_LIBRARIES dispatch)
 endif()
+set (COOL_LIBS ${COOL_LIBRARY_NAME} ${COOL_LINK_LIBRARIES})
 
 get_directory_property(hasParent PARENT_DIRECTORY)
 if (hasParent)
 set (COOL_INCLUDE ${COOL_HOME}/include PARENT_SCOPE)
 set (COOL_LIBS ${COOL_LIBS} PARENT_SCOPE)
+set (COOL_VERSION ${COOL_VERSION} PARENT_SCOPE)
+set (COOL_SOVERSION ${COOL_SOVERSION} PARENT_SCOPE)
 endif()
 
 add_definitions(-D${TARGET})
@@ -170,6 +179,8 @@ source_group("Impl Source Files" FILES ${COOL_SRCS})
 
 if (COOL_DYNAMIC)
   add_library(${COOL_LIBRARY_NAME} SHARED ${COOL_SRCS} ${COOL_HEADERS} ${COOL_IMPL_HEADERS})
+  set_target_properties(${COOL_LIBRARY_NAME} PROPERTIES VERSION ${COOL_VERSION})
+  set_target_properties(${COOL_LIBRARY_NAME} PROPERTIES SOVERSION ${COOL_SOVERSION})
   if (WIN32)
     set_target_properties(${COOL_LIBRARY_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${COOL_LIBRARY_DIR})
     set_target_properties(${COOL_LIBRARY_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${COOL_LIBRARY_DIR})
@@ -181,14 +192,19 @@ else()
   set_target_properties(${COOL_LIBRARY_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${COOL_LIBRARY_DIR})
 endif()
 
-if (WIN32)
-   target_link_libraries(${COOL_LIBRARY_NAME} dispatch)
-endif()
+target_link_libraries(${COOL_LIBRARY_NAME} ${COOL_LINK_LIBRARIES})
 
 # --- Tests
 set (TESTS
    runner
+   on_exception
 )
+
+if( NOT WIN32 )
+  set (TESTS ${TESTS}
+    reader_writer
+  )
+endif()
 
 # --- Doxygen documentation
 
@@ -243,4 +259,3 @@ if (COOL_BUILD_TEST)
 
 
 endif()
-

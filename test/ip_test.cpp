@@ -44,7 +44,7 @@ cool::net::ipv6::host results[] = {
   cool::net::ipv6::unspecified,
   { 0x26, 0x05, 0x27, 0x00,/**/ 0x00, 0x00, 0x00, 0x03,/**/ 0x00, 0x00, 0x00, 0x00,/**/ 0x47, 0x13, 0x93, 0xe3 },
   { 0x26, 0x05, 0x27, 0x00,/**/ 0x00, 0x00, 0x00, 0x03,/**/ 0x00, 0x00, 0x00, 0x00,/**/ 0x47, 0x13, 0x93, 0xe3 },
-  
+
 };
 
 const char* ip6input[] = {
@@ -68,14 +68,14 @@ const char* ip6input[] = {
 void first_simple_test_ref()
 {
   std::cout << "============================ " << __FUNCTION__ << std::endl;
-  
+
   for (int i = 0; i < sizeof(ip6examples) / sizeof(ip6examples[0]); ++i)
   {
     cool::net::ip::host& addr = ip6examples[i];
     std::cout << std::endl << "EXPECT: " << ip6expect[i] << std::endl;
     std::cout << "        " << addr << std::endl;
   }
-  
+
   std::cout << "===========================================\n";
   cool::net::ipv6::host res;
   for (int i = 0; ip6input[i] != nullptr; ++i)
@@ -83,16 +83,16 @@ void first_simple_test_ref()
     std::stringstream ss(ip6input[i]);
     ss >> res;
     std::cout << "Input: " << ip6input[i] << std::endl;
-    
+
     cool::net::ip::address& ref = res;
     if (ref == results[i])
       std::cout << "OK   : " << ref << std::endl;
     else
       std::cout << "Fail : got " << ref << " expected " << results[i] << std::endl;
   }
-  
+
   std::cout << "===========================================\n";
-  
+
   std::cout << "Q    " << ip6examples[4] << " in " << cool::net::ipv6::rfc_ipv4map << " ?" << std::endl;
   std::cout << "A    " << (cool::net::ipv6::rfc_ipv4map.has(ip6examples[4]) ? "Yes" : "No") << std::endl;
   std::cout << "Q    " << ip6examples[5] << " in " << cool::net::ipv6::rfc_ipv4map << " ?" << std::endl;
@@ -107,9 +107,9 @@ void first_simple_test()
   std::cout << "IPv6 mapped prefix: " << cool::net::ipv6::rfc_ipv4map << std::endl;
   std::cout << "IPv4 loopback:      " << cool::net::ipv4::loopback << std::endl;
   std::cout << "IPv4 unspecified:   " << cool::net::ipv4::any << std::endl;
-  
+
   std::cout << "===========================================\n";
-  
+
   for (int i = 0; i < sizeof(ip6examples) / sizeof(ip6examples[0]); ++i)
   {
     cool::net::ipv6::host addr(ip6examples[i]);
@@ -121,7 +121,7 @@ void first_simple_test()
     addr.visualize(std::cout, cool::net::ipv6::Microsoft);
     std::cout << std::endl;
   }
-  
+
   std::cout << "===========================================\n";
   cool::net::ipv6::host res;
   for (int i = 0; ip6input[i] != nullptr; ++i)
@@ -134,9 +134,9 @@ void first_simple_test()
     else
       std::cout << "Fail : got " << res << " expected " << results[i] << std::endl;
   }
-  
+
   std::cout << "===========================================\n";
-  
+
   std::cout << "Q    " << ip6examples[4] << " in " << cool::net::ipv6::rfc_ipv4map << " ?" << std::endl;
   std::cout << "A    " << (cool::net::ipv6::rfc_ipv4map.has(ip6examples[4]) ? "Yes" : "No") << std::endl;
   std::cout << "Q    " << ip6examples[5] << " in " << cool::net::ipv6::rfc_ipv4map << " ?" << std::endl;
@@ -164,7 +164,7 @@ void ip_conversions()
   // ------------ struct in_addr/in6_addr ctor, assignment and type conversions
   {
     std::cout << "------ struct in_addr/in6_addr assignment and type conversion\n";
-    
+
     cool::net::ipv6::host ip6_r1 = { 0x00,0x00, 0x00,0x00, 0x00,0x00, 0x00,0x00, 0x00,0x00, 0xff,0xff, 0xc0,0xa8, 0x03,0x14 };
     cool::net::ipv6::host ip6_r2 = { 0x00,0x00, 0x00,0x00, 0x00,0x00, 0x00,0x00, 0x00,0x00, 0xef,0xff, 0xc0,0xa8, 0x03,0x14 };
     cool::net::ipv4::host ip4_r1 = { 192, 168, 3, 20 };
@@ -176,11 +176,11 @@ void ip_conversions()
     inet_pton(AF_INET6, "::ffff:c0a8:314", &(ip6_ref.sin6_addr));
     inet_pton(AF_INET6, "::efff:c0a8:314", &(ip6_ref_2.sin6_addr));
     inet_pton(AF_INET, "192.168.3.20", &(ip4_ref.sin_addr));
-    
+
     { // ctors
       struct sockaddr_in6 ip6_ref_3;
       inet_pton(AF_INET6, "2001::", &(ip6_ref_3.sin6_addr));
-    
+
       cool::net::ipv6::host h1(ip6_ref_2.sin6_addr);
       cool::net::ipv6::host h2(ip4_ref.sin_addr);
       cool::net::ipv6::network n1(96, ip6_ref.sin6_addr);
@@ -200,7 +200,7 @@ void ip_conversions()
       catch (...)
       { std::cout << "        Fail   - got unexpected exception\n"; }
     }
-    
+
     struct sockaddr_in6 ip6_aux;
     struct sockaddr_in ip4_aux;
 
@@ -214,7 +214,7 @@ void ip_conversions()
       ip6_1 = cool::net::ipv6::loopback;
       NEXCEPT("1INADDR ", ip6_1 = ip4_ref.sin_addr);
       SEQ(ip6_1, ip6_r1, true);
-      
+
       NEXCEPT("1INADDR ", ip6_aux.sin6_addr = ip6_r1);
       CMP(&ip6_aux.sin6_addr, &ip6_ref.sin6_addr, 16, true);
       NEXCEPT("1INADDR ", ip4_aux.sin_addr = ip6_r1);
@@ -224,25 +224,25 @@ void ip_conversions()
       cool::net::ipv4::host ip4_1;
       ::memset(&ip6_aux, 0, sizeof(ip6_aux));
       ::memset(&ip4_aux, 0, sizeof(ip4_aux));
-      
+
       NEXCEPT("2INADDR ", ip4_1 = ip4_ref.sin_addr);
       SEQ(ip4_1, ip4_r1, true);
       ip4_1 = cool::net::ipv4::loopback;
       NEXCEPT("2INADDR ", ip4_1 = ip6_ref.sin6_addr);
       SEQ(ip4_1, ip4_r1, true);
       EXCEPT("2INADDR ", ip4_1 = ip6_ref_2.sin6_addr, cool::exception::illegal_argument);
-      
+
       NEXCEPT("2INADDR ", ip4_aux.sin_addr = ip4_r1);
       CMP(&ip4_aux.sin_addr, &ip4_ref.sin_addr, 4, true);
       NEXCEPT("2INADDR ", ip6_aux.sin6_addr = ip4_r1);
       CMP(&ip6_aux.sin6_addr, &ip6_ref.sin6_addr, 16, true);
     }
   }
-  
+
   {
     cool::net::ipv6::network ip6_r1 = { 112, { 0x20, 0x01 } };
     cool::net::ipv4::network ip4_r1 = { 24, { 192, 168, 3, 0 } };
-    
+
     struct sockaddr_in6 ip6_ref;
     struct sockaddr_in  ip4_ref;
     inet_pton(AF_INET6, "2001::", &(ip6_ref.sin6_addr));
@@ -250,18 +250,18 @@ void ip_conversions()
 
     struct sockaddr_in6 ip6_aux;
     struct sockaddr_in ip4_aux;
-    
+
     {  // IPv6 network
       cool::net::ipv6::network ip6_1 = { 112, { 0 } };
       cool::net::ip::address& ref = ip6_1;
-      
+
       ::memset(&ip6_aux, 0, sizeof(ip6_aux));
       ::memset(&ip4_aux, 0, sizeof(ip4_aux));
 
       NEXCEPT("3INADDR ", ip6_1 = ip6_ref.sin6_addr);
       SEQ(ip6_1, ip6_r1, true);
       EXCEPT("3INADDR ", ref = ip4_ref.sin_addr, cool::exception::unsupported_operation);
-      
+
       NEXCEPT("3INADDR ", ip6_aux.sin6_addr = ip6_r1);
       CMP(&ip6_aux.sin6_addr, &ip6_ref.sin6_addr, 16, true);
       EXCEPT("3INADDR ", ip4_aux.sin_addr = ref, cool::exception::unsupported_operation);
@@ -269,14 +269,14 @@ void ip_conversions()
     {  // IPv4 network
       cool::net::ipv4::network ip4_1 = { 24, { 0 } };
       cool::net::ip::address& ref = ip4_1;
-      
+
       ::memset(&ip6_aux, 0, sizeof(ip6_aux));
       ::memset(&ip4_aux, 0, sizeof(ip4_aux));
-      
+
       NEXCEPT("4INADDR ", ip4_1 = ip4_ref.sin_addr);
       SEQ(ip4_1, ip4_r1, true);
       EXCEPT("4INADDR ", ref = ip6_ref.sin6_addr, cool::exception::unsupported_operation);
-      
+
       NEXCEPT("4INADDR ", ip4_aux.sin_addr = ip4_r1);
       CMP(&ip4_aux.sin_addr, &ip4_ref.sin_addr, 4, true);
       EXCEPT("4INADDR ", ip6_aux.sin6_addr = ref, cool::exception::unsupported_operation);
@@ -284,19 +284,19 @@ void ip_conversions()
   }
   {
     std::cout << "------ uint8_t* ctor, assignment and type conversion\n";
-    
+
     uint8_t ip_ref[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10 };
     cool::net::ipv6::host r6h = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10 };
     cool::net::ipv6::network r6n = { 128, { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10 } };
     cool::net::ipv4::host r4h = { 0x01, 0x02, 0x03, 0x04 };
     cool::net::ipv4::network r4n= { 32, { 0x01, 0x02, 0x03, 0x04 } };
-    
+
     { // ctor
       cool::net::ipv6::host h6(ip_ref);
       cool::net::ipv6::network n6(128, ip_ref);
       cool::net::ipv4::host h4(ip_ref);
       cool::net::ipv4::network n4(32, ip_ref);
-      
+
       SEQ(h6, r6h, true);
       SEQ(n6, r6n, true);
       SEQ(h4, r4h, true);
@@ -307,12 +307,12 @@ void ip_conversions()
       cool::net::ipv6::network n6(128);
       cool::net::ipv4::host h4;
       cool::net::ipv4::network n4(32);
-      
+
       h6 = ip_ref;
       n6 = ip_ref;
       h4 = ip_ref;
       n4 = ip_ref;
-      
+
       SEQ(h6, r6h, true);
       SEQ(n6, r6n, true);
       SEQ(h4, r4h, true);
@@ -323,7 +323,7 @@ void ip_conversions()
       cool::net::ipv6::network n6(128);
       cool::net::ipv4::host h4;
       cool::net::ipv4::network n4(32);
-      
+
       CMP(ip_ref, r6h, 16, true);
       CMP(ip_ref, r6n, 16, true);
       CMP(ip_ref, r4h, 4, true);
@@ -333,7 +333,7 @@ void ip_conversions()
       ::memcpy(n6, ip_ref, 16);
       ::memcpy(h4, ip_ref, 4);
       ::memcpy(n4, ip_ref, 4);
-      
+
       SEQ(h6, r6h, true);
       SEQ(n6, r6n, true);
       SEQ(h4, r4h, true);
@@ -366,7 +366,7 @@ void ip_conversions()
     std::string s_i4 = c_i4;
     std::string s_i2_1 = c_i2_1;
     std::string s_i4_1 = c_i4_1;
-    
+
     { // ctor using std::string
       std::cout << "-------- ctor std::string\n";
       cool::net::ipv6::host h1(s_i1);
@@ -413,7 +413,7 @@ void ip_conversions()
       cool::net::ipv4::network n4(c_i4);
       SEQ(n4, ip4_r2, true);
     }
-    
+
     std::cout << "-------- assign std::string\n";
     { // std::string assignment and std::string conversion
       std::stringstream ss;
@@ -573,7 +573,7 @@ void ipv6_host_ref()
     cool::net::ipv6::network nv6 = { 120, { 0x73, 0x00} };
     cool::net::ipv4::host hv4 = { 192, 168, 3, 12};
     cool::net::ipv4::network nv4 = { 8, { 10 }};
-    
+
     cool::net::ip::address& rh1 = h1;
     cool::net::ip::address& rh2 = h2;
     cool::net::ip::address& rh3 = h3;
@@ -644,7 +644,7 @@ void ip_ownership()
   cool::net::ipv6::host host6_2("2001:ab44::21");
   cool::net::ipv6::host host6_3("2001:ab13::21");
   cool::net::ipv6::host host6_4("::ffff:192.168.3.40");
-  
+
   cool::net::ipv4::network net4_1("10.60.0.0/16");
   cool::net::ipv4::network net4_2("10.0.0.0/8");
   cool::net::ipv4::network net4_3("10.62.0.0/16");
@@ -652,14 +652,14 @@ void ip_ownership()
   cool::net::ipv4::host host4_2("10.62.55.42");
   cool::net::ipv4::host host4_3("10.42.66.99");
   cool::net::ipv4::host host4_4("192.168.3.44");
-  
+
   IN(net6_1, net6_2, true);
   IN(net6_3, net6_2, true);
   IN(net6_2, net6_3, false);
   IN(net6_2, net6_1, false);
   IN(net6_2, net4_3, false);
   IN(net4_3, net6_2, false);
-  
+
   IN(host6_1, net6_1, true);
   IN(host6_1, net6_2, true);
   IN(host6_1, net6_3, false);
@@ -676,7 +676,7 @@ void ip_ownership()
   IN(net4_3, net4_2, true);
   IN(net4_2, net4_3, false);
   IN(net4_2, net4_1, false);
-  
+
   IN(host4_1, net4_1, true);
   IN(host4_1, net4_2, true);
   IN(host4_1, net4_3, false);
@@ -689,7 +689,7 @@ void ip_ownership()
   IN(host4_4, net4_1, false);
   IN(host4_4, net4_2, false);
   IN(host4_4, net4_3, false);
-  
+
   IN(host4_1, net6_1, false);
   IN(host6_1, net4_1, false);
 

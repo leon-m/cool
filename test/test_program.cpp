@@ -47,7 +47,7 @@ cool::basis::aim<int> test_runner::test_one()
     [](int n)
     {
       std::this_thread::sleep_for(std::chrono::seconds(10));
-      return n * 2; 
+      return n * 2;
     },
     input
   );

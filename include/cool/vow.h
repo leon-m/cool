@@ -50,20 +50,20 @@ template <typename T> class aim_base
 {
  protected:
   typedef entrails::state<T> state_t;
-  
+
  public:
   typedef vow<T>             vow_t;
-  
+
  private:
   typedef aim_base<T>        this_t;
-  
+
  protected:
   aim_base(const aim_base&)            = default;
   aim_base& operator= (aim_base&)      = default;
   aim_base(aim_base&& rhs)             = delete;
   aim_base& operator =(aim_base&& rhs) = delete;
   aim_base()                           = delete;
- 
+
  public:
   /**
    * Block until the result becomes available and return result.
@@ -73,7 +73,7 @@ template <typename T> class aim_base
    * @exception any Exception as reported by the asynchronous operation
    *   via set(const std::exception_ptr&) overload of cool::basis::vow.
    * @exception cool::exception::illegal_state if the result stored in
-   *   the shared stateexceptionwas already consumed.
+   *   the shared state exception was already consumed.
    * @exception cool::exception::broken_vow if the last cool::basis::vow dropped
    *   the reference to the shared state without making it ready.
    * @note When two or more threads are calling get() on the aim<> clones
@@ -122,13 +122,13 @@ template <typename T> class aim_base
    */
   template <typename Clock, typename Duration>
   T get(const std::chrono::time_point<Clock, Duration>& timepoint);
-  
+
  protected:
   aim_base(const typename state_t::ptr_t& state);
   bool then_base(bool& fail,
                  const typename state_t::success_cb_t& scb,
                  const typename state_t::failure_cb_t& fcb);
-  
+
  protected:
   typename state_t::ptr_t m_state;
 };
@@ -146,14 +146,14 @@ template <typename T> class aim_base
  * through the cool::basis::vow::get_aim() method, which creates and returns
  * the aim object associated with the same shared state. Once the results are
  * obtained either through the callback specified through one of the then()
- * overloads or throught one of the get() overloads the shared state is
+ * overloads or through one of the get() overloads the shared state is
  * marked <i>consumed</i> and the subsequent attempt to obtain the result
  * will throw the exception of type cool::basis::illegal_state_exception.
  *
  * the cool::basis::aim object is the consumer side of the vow-aim communication
- * channel. The asynchonous operation uses cool::basis::vow object to set
+ * channel. The asynchronous operation uses cool::basis::vow object to set
  * the result and the creator of the asynchronous operation can use associated
- * aim object to access the result, once it becomes avaialable, as in the
+ * aim object to access the result, once it becomes available, as in the
  * following example code fragment:
  * @code
  *     vow<int> v;
@@ -173,7 +173,7 @@ template <typename T> class aim_base
 template <typename T> class aim : public aim_base<T> {
  private:
   typedef aim<T>             this_t;
-  
+
  public:
   /**
    * Type of the result accessible through aim.
@@ -203,11 +203,11 @@ template <typename T> class aim : public aim_base<T> {
    * Type for the user code chained callbacks.
    *
    * This callback type is used for chaining the user callbacks. The user callback
-   * code must be Callable object that can be assinged to the function type
+   * code must be Callable object that can be assigned to the function type
    * @c std::function<void(const vow<T>&, const T&)> .
    */
   typedef typename aim_base<T>::state_t::chained_cb_t chained_cb_t;
-  
+
  public:
   /**
    * Set the user callbacks.
@@ -219,7 +219,7 @@ template <typename T> class aim : public aim_base<T> {
    * @param fcb Callable to be called when the exception object is set
    *
    * @note If the shared state was made ready before the call to this method,
-   *   the appropriate function object will be called immediatelly from the
+   *   the appropriate function object will be called immediately from the
    *   context of the calling thread. Otherwise, the appropriate function object
    *   will be called when the shared state is made ready from the context of
    *   the thread that made the shared state ready.
@@ -235,10 +235,10 @@ template <typename T> class aim : public aim_base<T> {
    * callbacks.
    * @code
        cool::basis::vow<double> v;
-   
+
        {
          auto a = v.get_aim();
-   
+
          a.then(
            [] (const double& result)
            {
@@ -250,7 +250,7 @@ template <typename T> class aim : public aim_base<T> {
            }
          );
        }
-   
+
        std::thread t([=] () { v.set(42.42); } );
        t.join();
    * @endcode
@@ -267,14 +267,14 @@ template <typename T> class aim : public aim_base<T> {
    * but the last callback in the chain receives an internally generated
    * vow object which it should use to propagate the result of its execution
    * to the next callback in the chain. The execution of the callbacks
-   * in the chain stops immediatelly when the user code throws an exception
-   * and the execption object is propagated to the error callback, specified to
+   * in the chain stops immediately when the user code throws an exception
+   * and the exception object is propagated to the error callback, specified to
    * the last link in the chain.
    *
    * @param ccb Chained callback to be called when the shared state is made ready
-   *  the result is set.
+   *   and the result is set.
    * @return The aim object associated with the vow object passed to the user
-   *  callback.
+   *   callback.
    *
    * <b>Example</b><br>
    * This simplified example illustrates the use of the chained then(). This
@@ -286,65 +286,65 @@ template <typename T> class aim : public aim_base<T> {
   };
   auto cb_1st = [] (const vow<double>& v1, const double& result)
   {
-    std::cout << "++++++ OK first internediate result " << result << std::endl;
+    std::cout << "++++++ OK first intermediate result " << result << std::endl;
     v1.set(result * 2);
   };
   auto cb_2nd = [] (const vow<double>& v2, const double& result)
   {
-    std::cout << "++++++ OK second internediate result " << result << std::endl;
+    std::cout << "++++++ OK second intermediate result " << result << std::endl;
     v2.set(result * 2);
   };
   auto cb_3rd = [] (const double result)
   {
     std::cout << "++++++ OK final result " << result << std::endl;
   };
-  
+
   cool::basis::vow<double> v;
 
   v.get_aim().then(cb_1st).then(cb_2nd).then(cb_3rd, err_cb);
-  
+
   std::thread t([=] () { v.set(42.42); } );
   t.join();
    * @endcode
    * will produce the following output:
    * @code
-   ++++++ OK first internediate result 42.42
-   ++++++ OK second internediate result 84.84
+   ++++++ OK first intermediate result 42.42
+   ++++++ OK second intermediate result 84.84
    ++++++ OK final result 169.68
    * @endcode
    * @note All user callbacks in the chain expect the result of the same
    *   data type.
-   * @note Chaining the user callbacks allow the better structure of the
+   * @note Chaining the user callbacks allow better structure of the
    *   callback code since several smaller, specialized functions can be used
-   *   in place of a single, larger and unstructured block of code.
+   *   in place of a single, larger, and unstructured block of code.
    * @note The user callbacks specified in the chain after the user callback
    *   that threw an exception will not be called. Thus replacing variable
-   *   @c cb_1st from the above example with the following lamda:
+   *   @c cb_1st from the above example with the following lambda:
    * @code
   auto cb_1st = [] (const vow<double>& v1, const double& result)
   {
-    std::cout << "++++++ OK internediate result " << result << std::endl;
+    std::cout << "++++++ OK intermediate result " << result << std::endl;
     throw 42;
   };
    * @endcode
-   * will skip the execution of the lambda @c cb_2nd and will immediatelly engage
+   * will skip the execution of the lambda @c cb_2nd and will immediately engage
    * the error handler @c err_cb, yielding the following output:
    * @code
-   ++++++ OK first internediate result 42.42
+   ++++++ OK first intermediate result 42.42
    ------ ERROR got exception
    * @endcode
    * @note Instead of throwing an exception the @c cb_1st lambda could use
    *   the set() method on vow object @c v1 to set the exception pointer and
-   *   to achieve the same effect,
+   *   to achieve the same effect.
    */
   this_t then(const chained_cb_t& ccb);
-  
+
   /**
    * Set the chain of user callbacks passing different result types.
    *
-   * This method template acts the same as the chained 
+   * This method template acts the same as the chained
    * @ref then(const chained_cb_t& ccb) "then()" but it allows results of different
-   * to be passed between callbacks in the chain, as in the following code
+   * types to be passed between callbacks in the chain, as in the following code
    * fragment:
    * @code
   auto err_cb = [] (const std::exception_ptr& err)
@@ -353,25 +353,25 @@ template <typename T> class aim : public aim_base<T> {
   };
   auto cb_1st = [] (const vow<double>& v1, const bool& result)
   {
-    std::cout << "++++++ OK first internediate result " << result << std::endl;
+    std::cout << "++++++ OK first intermediate result " << result << std::endl;
     v1.set(42.42);
   };
   auto cb_2nd = [] (const double result)
   {
     std::cout << "++++++ OK final result " << result << std::endl;
   };
-  
+
   cool::basis::vow<bool> v;
 
   v.get_aim().then<double>(cb_1st).then(cb_2nd, err_cb);
-  
+
   std::thread t([=] () { v.set(true); } );
   t.join();
    * @endcode
    */
   template <typename Y>
   aim<Y> then(const std::function<void (const vow<Y>&, const result_t&)>& ccb);
-  
+
  private:
   template <typename Y> friend class vow_base;
   aim(const typename aim_base<T>::state_t::ptr_t& state);
@@ -409,11 +409,11 @@ template <> class aim<void> : public aim_base<void>
    * Type for the user code chained callbacks.
    *
    * This callback type is used for chaining the user callbacks. The user callback
-   * code must be Callable object that can be assinged to the function type
+   * code must be Callable object that can be assigned to the function type
    * @c std::function<void(const vow<void>&)> .
    */
   typedef aim_base<void>::state_t::chained_cb_t chained_cb_t;
-  
+
  public:
   /**
    * Set the user callbacks.
@@ -425,7 +425,7 @@ template <> class aim<void> : public aim_base<void>
    * @param fcb Callable to be called when the exception object is set
    *
    * @note If the shared state was made ready before the call to this method,
-   *   the appropriate function object will be called immediatelly from the
+   *   the appropriate function object will be called immediately from the
    *   context of the calling thread. Otherwise, the appropriate function object
    *   will be called when the shared state is made ready from the context of
    *   the thread that made the shared state ready.
@@ -440,10 +440,10 @@ template <> class aim<void> : public aim_base<void>
    * callbacks.
    * @code
   cool::basis::vow<void> v;
-  
+
   {
     auto a = v.get_aim();
-    
+
     a.then(
       [] ()
       {
@@ -455,14 +455,14 @@ template <> class aim<void> : public aim_base<void>
       }
     );
   }
-  
+
   std::thread t([=] () { v.set(); } );
   t.join();
    * @endcode
    */
   dlldecl void then(const success_cb_t& scb,
             const failure_cb_t& fcb);
-  
+
   /**
    * Set the chain of user callbacks.
    *
@@ -472,14 +472,14 @@ template <> class aim<void> : public aim_base<void>
    * but the last callback in the chain receives an internally generated
    * vow object which it should use to propagate the result of its execution
    * to the next callback in the chain. The execution of the callbacks
-   * in the chain stops immediatelly when the user code throws an exception
-   * and the execption object is propagated to the error callback, specified to
+   * in the chain stops immediately when the user code throws an exception
+   * and the exception object is propagated to the error callback, specified to
    * the last link in the chain.
    *
    * @param ccb Chained callback to be called when the shared state is made ready
-   *  the result is set.
+   *   and the result is set.
    * @return The aim object associated with the vow object passed to the user
-   *  callback.
+   *   callback.
    *
    * <b>Example</b><br>
    * This simplified example illustrates the use of the chained then(). This
@@ -503,11 +503,11 @@ template <> class aim<void> : public aim_base<void>
   {
     std::cout << "++++++ OK final callback called." << std::endl;
   };
-  
+
   cool::basis::vow<void> v;
 
   v.get_aim().then(cb_1st).then(cb_2nd).then(cb_3rd, err_cb);
-  
+
   std::thread t([=] () { v.set(); } );
   t.join();
    * @endcode
@@ -519,12 +519,12 @@ template <> class aim<void> : public aim_base<void>
    * @endcode
    * @note All user callbacks in the chain expect the result of the same
    *   data type.
-   * @note Chaining the user callbacks allow the better structure of the
+   * @note Chaining the user callbacks allow better structure of the
    *   callback code since several smaller, specialized functions can be used
-   *   in place of a single, larger and unstructured block of code.
+   *   in place of a single, larger, and unstructured block of code.
    * @note The user callbacks specified in the chain after the user callback
    *   that threw an exception will not be called. Thus replacing variable
-   *   @c cb_1st from the above example with the following lamda:
+   *   @c cb_1st from the above example with the following lambda:
    * @code
   auto cb_1st = [] (const vow<void>& v1)
   {
@@ -532,7 +532,7 @@ template <> class aim<void> : public aim_base<void>
     throw 42;
   };
    * @endcode
-   * will skip the execution of the lambda @c cb_2nd and will immediatelly engage
+   * will skip the execution of the lambda @c cb_2nd and will immediately engage
    * the error handler @c err_cb, yielding the following output:
    * @code
    ++++++ OK first callback called.
@@ -543,13 +543,13 @@ template <> class aim<void> : public aim_base<void>
    *   to achieve the same effect,
    */
   dlldecl this_t then(const chained_cb_t& ccb);
-  
+
   /**
    * Set the chain of user callbacks passing different result types.
    *
-   * This method template acts the same as the chained 
+   * This method template acts the same as the chained
    * @ref then(const chained_cb_t& ccb) "then()" but it allows results of different
-   * to be passed between callbacks in the chain, as in the following code
+   * types to be passed between callbacks in the chain, as in the following code
    * fragment:
    * @code
   auto err_cb = [] (const std::exception_ptr& err)
@@ -565,18 +565,18 @@ template <> class aim<void> : public aim_base<void>
   {
     std::cout << "++++++ OK final result " << result << std::endl;
   };
-  
+
   cool::basis::vow<void> v;
 
   v.get_aim().then<double>(cb_1st).then(cb_2nd, err_cb);
-  
+
   std::thread t([=] () { v.set(); } );
   t.join();
    * @endcode
    */
   template <typename Y>
   aim<Y> then(const std::function<void (const vow<Y>&)>& ccb);
-  
+
  private:
   template <typename Y> friend class vow_base;
   aim(const state_t::ptr_t& state);
@@ -586,11 +586,11 @@ template <> class aim<void> : public aim_base<void>
 /**
  * Base class of the vow<T> class template.
  *
- * @tparam  T Type of the result to be reported to the associated aim<T> object.
+ * @tparam T Type of the result to be reported to the associated aim<T> object.
  *
  * @note This class template servers as the base class for the
- *  vow<T> class template and its specializations. It cannot be
- *  used on its own.
+ *   vow<T> class template and its specializations. It cannot be
+ *   used on its own.
  *
  * @see @ref cool::basis::vow "vow<T>"
  */
@@ -604,9 +604,9 @@ template <typename T> class vow_base
   vow_base& operator= (const vow_base&);
   vow_base();
   ~vow_base();
-  
+
   void set(const std::exception_ptr&) const;
-  
+
  public:
   /**
    * Predicate to check whether the shared state was made ready.
@@ -624,30 +624,30 @@ template <typename T> class vow_base
    * @return cool::basis::aim object associated with vow object.
    *
    * @note Multiple calls to get_aim() are permitted. All cool::basis::aim
-   *  objects returned through multiple calls to get_aim() on vow object, or
-   *  multiple vow objects associated with the same shared state, will
-   *  be associated with the same shared state.
+   *   objects returned through multiple calls to get_aim() on vow object, or
+   *   multiple vow objects associated with the same shared state, will
+   *   be associated with the same shared state.
    */
   aim_t get_aim() const;
-  
+
  protected:
   typename state_t::ptr_t m_state;
 };
 
 /**
- * Stores a result of an execution in a seperate thread (asynchronous task).
+ * Stores the result of an execution in a separate thread (asynchronous task).
  *
  * @tparam T Type of the result to be reported to the vow.
  *
  * The cool::basis::vow class template provides a facility to store a result,
- * or an exception, of a function executing in a separate thread and which can 
- * later be acquired through cool::basis::aim object created by the 
- * cool::basis::vow object. Each cool::basis::vow object is associated with a 
+ * or an exception, of a function executing in a separate thread, which can
+ * later be acquired through cool::basis::aim object created by the
+ * cool::basis::vow object. Each cool::basis::vow object is associated with a
  * shared state, which
- * contain some state information and the <i>result</i>, which may not yet be
+ * contains some state information and the <i>result</i>, which may not yet be
  * evaluated, evaluated to a value (possibly void) or evaluated to an
- * exception. A vow may do one the the following three things
- * with the shared state:
+ * exception. A vow may do one of the following three things with
+ * the shared state:
  *  - <i>make ready</i>; the vow stores the result or the exception in the
  *    shared state and marks it ready. The latter either unlocks the thread
  *    waiting on an cool::basis::aim, associated with the same shared state,
@@ -682,12 +682,12 @@ template <typename T> class vow : public vow_base<T>
   typedef T                       result_t;
   typedef vow<T>                  this_t;
   typedef std::shared_ptr<this_t> ptr_t;
-  
+
  public:
   vow(const vow&)              = default;
   vow& operator= (const vow&)  = default;
   vow();
-  
+
   /**
    * Store the exception into the shared state and make it ready.
    *
@@ -695,7 +695,7 @@ template <typename T> class vow : public vow_base<T>
    *            into the shared state.
    *
    * @exception cool::exception::illegal thrown if the shared
-   *    state associated with the vow object was already made ready.
+   *   state associated with the vow object was already made ready.
    *
    * @note The call to set() will invoke the user callback if one was set
    *   through one of then() overloads of associated  cool::basis::aim object.
@@ -707,7 +707,7 @@ template <typename T> class vow : public vow_base<T>
    * @param value result to be stored into the shared state.
    *
    * @exception cool::exception::illegal_state thrown if the shared
-   *    state associated with the vow object was already made ready.
+   *   state associated with the vow object was already made ready.
    *
    * @note The call to set() will invoke the user callback if one was set
    *   through one of then() overloads of associated  cool::basis::aim object.
@@ -727,12 +727,12 @@ template <> class vow<void> : public vow_base<void>
   typedef void                       result_t;
   typedef vow<void>                  this_t;
   typedef std::shared_ptr<this_t>    ptr_t;
-  
+
  public:
   vow(const vow&)              = default;
   vow& operator= (const vow&)  = default;
   vow();
-  
+
   /**
    * Store the exception into the shared state and make it ready.
    *
@@ -740,7 +740,7 @@ template <> class vow<void> : public vow_base<void>
    *            into the shared state.
    *
    * @exception cool::exception::illegal_state thrown if the shared
-   *    state associated with the vow object was already made ready.
+   *   state associated with the vow object was already made ready.
    *
    * @note The call to set() will invoke the user callback if one was set
    *   through one of then() overloads of associated  cool::basis::aim object.
@@ -750,7 +750,7 @@ template <> class vow<void> : public vow_base<void>
    * Make the shared state ready.
    *
    * @exception cool::exception::illegal_state thrown if the shared
-   *    state associated with the vow object was already made ready.
+   *   state associated with the vow object was already made ready.
    *
    * @note The call to set() will invoke the user callback if one was set
    *   through one of then() overloads of associated  cool::basis::aim object.
@@ -767,17 +767,17 @@ template <> class vow<void> : public vow_base<void>
 template <typename T>
 aim_base<T>::aim_base(const typename state_t::ptr_t& state) : m_state(state)
 { /* noop */ }
-  
+
 template <typename T>
 T aim_base<T>::get()
 {
   std::unique_lock<std::mutex> lock(m_state->mutex());
-  
+
   m_state->cv().wait(lock, [this] () { return !m_state->is_empty(); });
-  
+
   if (!m_state->is_set())   // if already wasted through callbacks
     throw exception::illegal_state("Results were already consumed");
-  
+
   if (m_state->is_failure())
     std::rethrow_exception(m_state->failure());
 
@@ -788,16 +788,16 @@ template <typename T> template <typename Rep, typename Period>
 T aim_base<T>::get(const std::chrono::duration<Rep, Period>& interval)
 {
   std::unique_lock<std::mutex> lock(m_state->mutex());
-  
+
   if (!m_state->cv().wait_for(lock, interval, [this]() { return !m_state->is_empty(); }))
     throw exception::timeout("timeout expired");
-  
+
   if (!m_state->is_set())   // if already wasted through callbacks
     throw exception::illegal_state("Results were already consumed");
-  
+
   if (m_state->is_failure())
     std::rethrow_exception(m_state->failure());
-  
+
   return m_state->get_result();
 }
 
@@ -805,16 +805,16 @@ template <typename T> template <typename Clock, typename Duration>
 T aim_base<T>::get(const std::chrono::time_point<Clock, Duration>& tp)
 {
   std::unique_lock<std::mutex> lock(m_state->mutex());
-  
+
   if (!m_state->cv().wait_until(lock, tp, [&]() { return !m_state->is_empty(); }))
     throw exception::timeout("timeout expired");
-  
+
   if (!m_state->is_set())   // if already wasted through callbacks
     throw exception::illegal_state("Results were already consumed");
-  
+
   if (m_state->is_failure())
     std::rethrow_exception(m_state->failure());
-  
+
   return m_state->get_result();
 }
 
@@ -824,9 +824,9 @@ bool aim_base<T>::then_base(bool& fail
                         , const typename state_t::failure_cb_t& fcb)
 {
   bool fire = false;
-  
+
   std::unique_lock<std::mutex> l(m_state->mutex());
-    
+
   fire = m_state->is_set();
   if (fire)
   {
@@ -838,7 +838,7 @@ bool aim_base<T>::then_base(bool& fail
     m_state->on_success(scb);
     m_state->on_failure(fcb);
   }
-  
+
   return fire;
 }
 
@@ -853,7 +853,7 @@ void aim<T>::then(const typename aim<T>::success_cb_t& scb,
                   const typename aim<T>::failure_cb_t& fcb)
 {
   bool fail;
-  // if the result is already available fire immediatelly
+  // if the result is already available, fire immediately
   if (aim_base<T>::then_base(fail, scb, fcb))
   {
     try
@@ -879,7 +879,7 @@ typename aim<T>::this_t aim<T>::then(const typename aim_base<T>::state_t::chaine
 {
   typename aim_base<T>::vow_t* p = new typename aim_base<T>::vow_t();
   this_t h = p->get_aim();
-  
+
   then(
     [=] (const T& val)
     {
@@ -897,7 +897,7 @@ typename aim<T>::this_t aim<T>::then(const typename aim_base<T>::state_t::chaine
       delete p;
     }
   );
-  
+
   return h;
 }
 
@@ -906,7 +906,7 @@ aim<Y> aim<T>::then(const std::function<void (const vow<Y>&, const T&)>& ccb)
 {
   vow<Y>* p = new vow<Y>();
   auto h = p->get_aim();
-  
+
   then(
     [=] (const T& val)
     {
@@ -924,7 +924,7 @@ aim<Y> aim<T>::then(const std::function<void (const vow<Y>&, const T&)>& ccb)
       delete p;
     }
   );
-  
+
   return h;
 }
 
@@ -937,7 +937,7 @@ aim<Y> aim<void>::then(const std::function<void (const vow<Y>&)>& ccb)
 {
   vow<Y>* p = new vow<Y>();
   auto h = p->get_aim();
-    
+
   then(
     [=] ()
     {
@@ -955,10 +955,10 @@ aim<Y> aim<void>::then(const std::function<void (const vow<Y>&)>& ccb)
        delete p;
      }
   );
-    
+
   return h;
 }
-  
+
 
 // --------------------------------------------------------------------------
 //
@@ -1001,19 +1001,19 @@ void vow_base<T>::set(const std::exception_ptr& err) const
 
   {
     std::unique_lock<std::mutex> l(m_state->mutex());
-    
+
     if (!m_state->is_empty())
       throw exception::illegal_state("This vow was already set.");
-      
+
     m_state->failure(err);
-    
+
     fcb = std::move(m_state->on_failure());
     if (fcb)
       m_state->deplete();
     else
       m_state->cv().notify_all();
   }
-  
+
   if (fcb)
   {
     fcb(m_state->failure());
@@ -1047,13 +1047,13 @@ template <typename T>
 void vow<T>::set(const T& value) const
 {
   typename vow_base<T>::state_t::success_cb_t scb;
-  
+
   {
     std::unique_lock<std::mutex> l (vow_base<T>::m_state->mutex());
-    
+
     if (!vow_base<T>::m_state->is_empty())
       throw exception::illegal_state("This vow was already set.");
-    
+
     vow_base<T>::m_state->set_result(value);
     scb = std::move(vow_base<T>::m_state->on_success());
     if (scb)
@@ -1061,7 +1061,7 @@ void vow<T>::set(const T& value) const
     else
       vow_base<T>::m_state->cv().notify_all();
   }
-  
+
   if (scb)
   {
     scb(vow_base<T>::m_state->get_result());

@@ -50,7 +50,7 @@ template <std::size_t Size> class binary
     ::memset(m_data, 0, Size);
   }
   /**
-   * Construts a binary buffer from and array. The byte array is assumed
+   * Constructs a binary buffer from an array. The byte array is assumed
    * to be at least as large as this binary buffer.
    */
   binary(uint8_t const data[])
@@ -61,14 +61,14 @@ template <std::size_t Size> class binary
    * Constructs a binary buffer and initializes its values from the initialization
    * least. If the list is larger than the binary buffer, excessive bytes are
    * ignored. If the list is shorter than the buffer, only first few bytes
-   * of of the buffer are initialized and the remaining elements are set to 0.
+   * of the buffer are initialized and the remaining elements are set to 0.
    */
   binary(std::initializer_list<uint8_t> args)
   {
     ::memset(m_data, 0, Size);
     std::size_t limit = args.size() < Size ? args.size() : Size;
     std::size_t index = 0;
-    
+
     for (auto iter = args.begin(); index < limit ; ++iter)
       m_data[index++] = *iter;
   }
@@ -206,8 +206,8 @@ template <std::size_t Size> class binary
    *
    * @param data byte array, right hand side operand
    * @return new binary buffer with results
-   * @note The operator assumes that the byte array is at elast as large as the
-   *  binary buffer.
+   * @note The operator assumes that the byte array is at least as large as the
+   *   binary buffer.
    */
   binary operator &(uint8_t const data[]) const
   {
@@ -238,8 +238,8 @@ template <std::size_t Size> class binary
    *
    * @param data byte array, right hand side operand
    * @return new binary buffer with results
-   * @note The operator assumes that the byte array is at elast as large as the
-   *  binary buffer.
+   * @note The operator assumes that the byte array is at least as large as the
+   *   binary buffer.
    */
   binary operator |(uint8_t const data[]) const
   {
@@ -270,8 +270,8 @@ template <std::size_t Size> class binary
    *
    * @param data byte array, right hand side operand
    * @return new binary buffer with results
-   * @note The operator assumes that the byte array is at elast as large as the
-   *  binary buffer.
+   * @note The operator assumes that the byte array is at least as large as the
+   *   binary buffer.
    */
   binary operator ^(uint8_t const data[]) const
   {
@@ -300,13 +300,13 @@ template <std::size_t Size> class binary
    * @param start start offset
    * @param data input data array
    * @exception cool::exception::out_of_range thrown if start offset is beyond
-   *  the binary buffer size
+   *   the binary buffer size
    * @note The method assumes that the input byte array is large enough
    */
   void set(int start, uint8_t const data[])
   {
     if (start >= Size)
-      throw exception::out_of_range("copy request out of bounds");
+      throw exception::out_of_range("Copy request out of bounds");
     int n = Size - start;
     ::memcpy(&m_data[start], data, n);
   }
@@ -318,14 +318,14 @@ template <std::size_t Size> class binary
    * @param data input data array
    * @param size number of bytes to set
    * @exception cool::exception::out_of_range thrown if start offset is beyond
-   *  the binary buffer size
+   *   the binary buffer size
    * @note The actual number of bytes set may be less than the requested size
-   *  if the @c start + @c size would exceed the binary buffer size
+   *   if the @c start + @c size would exceed the binary buffer size
    */
   void set(int start, uint8_t const data[], int size)
   {
     if (start >= Size)
-      throw exception::out_of_range("copy request out of bounds");
+      throw exception::out_of_range("Copy request out of bounds");
 
     int n = Size - start;
     if (n > size)
@@ -339,7 +339,7 @@ template <std::size_t Size> class binary
   {
     return Size;
   }
-  
+
  private:
   uint8_t m_data[Size];
 };
