@@ -233,29 +233,63 @@ endif()
 # --- Google test
 
 if (COOL_BUILD_TEST)
-##########################################################################
-# Google Test library
-#
-# Output variables:
-#     GOOGLETEST_HOME            Google Test install directory
-#     GOOGLETEST_INCLUDE_DIR     Self explanatory
-#     GOOGLETEST_LIBRARIES       Google Test runtime libraries
-#     GOOGLETEST_LIBRARIES_ALL   Google Test runtime libraries with main()
 
-  set (GOOGLETEST_HOME ${CMAKE_CURRENT_BINARY_DIR}/gtest-1.7.0)
-  set (GOOGLETEST_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/externals/gtest-1.7.0/include)
+  #  Google Test download and build
+  ###################################################################
+  set (GTEST_VERSION 1.8.0)
+  INCLUDE(ExternalProject)
 
-  add_subdirectory(externals/gtest-1.7.0)
+  # Set default ExternalProject root directory
+  SET_DIRECTORY_PROPERTIES(PROPERTIES EP_PREFIX ${CMAKE_BINARY_DIR}/third_party)
 
-  set (GOOGLETEST_LIBRARIES gtest)
-  set (GOOGLETEST_LIBRARIES_ALL gtest gtest_main)
+  # Add gtest
+  # http://stackoverflow.com/questions/9689183/cmake-googletest
+  ExternalProject_Add(
+      googletest
+      URL https://github.com/google/googletest/archive/release-${GTEST_VERSION}.zip
+      TIMEOUT 100
+      # # Force separate output paths for debug and release builds to allow easy
+      # # identification of correct lib in subsequent TARGET_LINK_LIBRARIES commands
+      # CMAKE_ARGS -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG:PATH=DebugLibs
+      #            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE:PATH=ReleaseLibs
+      #            -Dgtest_force_shared_crt=ON
+      # Disable install step
+      INSTALL_COMMAND ""
+      # Wrap download, configure and build steps in a script to log output
+      LOG_DOWNLOAD ON
+      LOG_CONFIGURE ON
+      LOG_BUILD ON)
 
-  include_directories(${GOOGLETEST_INCLUDE_DIR})
+  # Specify include dir
+  ExternalProject_Get_Property(googletest source_dir)
+  set(GTEST_INCLUDE_DIR ${source_dir}/googletest/include)
+
+  # Library
+  ExternalProject_Get_Property(googletest binary_dir)
+  set(GTEST_LIBRARY_PATH ${binary_dir}/googlemock/gtest/${CMAKE_CFG_INTDIR})
+  set(GTEST_LIBRARY gtest)
+  set(GTEST_LIBRARY_MAIN gtest_main)
+
+  add_library(${GTEST_LIBRARY} UNKNOWN IMPORTED)
+  set_property(TARGET ${GTEST_LIBRARY} PROPERTY IMPORTED_LOCATION
+                  ${GTEST_LIBRARY_PATH}/${CMAKE_STATIC_LIBRARY_PREFIX}${GTEST_LIBRARY}${CMAKE_STATIC_LIBRARY_SUFFIX} )
+  add_dependencies(${GTEST_LIBRARY} googletest)
+  add_library(${GTEST_LIBRARY_MAIN} UNKNOWN IMPORTED)
+  set_property(TARGET ${GTEST_LIBRARY_MAIN} PROPERTY IMPORTED_LOCATION
+                  ${GTEST_LIBRARY_PATH}/${CMAKE_STATIC_LIBRARY_PREFIX}${GTEST_LIBRARY_MAIN}${CMAKE_STATIC_LIBRARY_SUFFIX} )
+  add_dependencies(${GTEST_LIBRARY_MAIN} googletest)
+
+  include_directories(${GTEST_INCLUDE_DIR})
+  link_directories(${GTEST_LIBRARY_PATH})
+
+  # end of Google test download and build
+  ###################################################################
+
   foreach (test ${TESTS})
     add_executable (test_${test} ${COOL_HOME}/test/test_${test}.cpp)
-    target_link_libraries(test_${test} ${COOL_LIBS} ${GOOGLETEST_LIBRARIES_ALL})
+    target_link_libraries(test_${test} ${GTEST_LIBRARY} ${GTEST_LIBRARY_MAIN} ${COOL_LIBS}  )
+
     set_target_properties(test_${test} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${COOL_TEST_DIR})
   endforeach()
-
 
 endif()
