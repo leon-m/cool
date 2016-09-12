@@ -28,7 +28,7 @@
 #include <memory>
 
 #include <dispatch/dispatch.h>
-
+#include "platform.h"
 #include "traits.h"
 
 namespace cool { namespace gcd { namespace task {
@@ -63,16 +63,37 @@ using void_binder_t = std::function<task_t*()>;
 
 using error_handler_t = std::function<void(const std::exception_ptr&)>;
 
+// discriminated union for sutasks
+class task_union
+{
+  enum Type { Empty, Task, Subtask };
+
+ public:
+  task_union() : m_content_type(Empty)
+  { /* noop */ }
+  explicit operator bool() const { return m_content_type != Empty; }
+  void task(task_t* arg)         { m_u.task = arg; m_content_type = Task; }
+  task_t* task() const           { return m_u.task; }
+  void subtask(void* arg)        { m_u.subtask = arg; m_content_type = Subtask; }
+  void* subtask() const          { return m_u.subtask; }
+  bool has_task() const          { return m_content_type == Task; }
+  bool has_subtask() const       { return m_content_type == Subtask; }
+
+ private:
+  Type m_content_type;
+  union {
+    task_t* task;
+    void*   subtask;
+  } m_u;
+};
+
 struct taskinfo
 {
   dlldecl taskinfo(const std::weak_ptr<runner>& r);
   dlldecl taskinfo(entrails::task_t* t, const std::weak_ptr<runner>& r);
   dlldecl ~taskinfo();
 
-  union {
-    task_t* task;
-    void*   subtask;
-  }                         m_u;
+  task_union m_callable;
   entrails::error_handler_t m_eh;
   std::function<void()>     m_deleter;   // deleter for subtask
   std::weak_ptr<runner>     m_runner;
@@ -123,15 +144,19 @@ template <typename ResultT> class task_entry
         delete next;
         next = aux;
       }
+
       if (next != nullptr)
       {
-        if (next->m_u.subtask != nullptr)
+        if (next->m_callable)
         {
-          // bind result to partially bound subtask
-          binder_t<ResultT>* subtask = static_cast<binder_t<ResultT>*>(next->m_u.subtask);
-          next->m_u.task = (*subtask)(result);  // rebind
-          delete subtask;
-          next->m_deleter = task_t();           // disarm subtask deleter
+          if (next->m_callable.has_subtask())
+          {
+            // bind result to partially bound subtask
+            binder_t<ResultT>* subtask = static_cast<binder_t<ResultT>*>(next->m_callable.subtask());
+            next->m_callable.task((*subtask)(result));  // rebind
+            delete subtask;
+            next->m_deleter = task_t();           // disarm subtask deleter
+          }
           kickstart(next);                      // schedule next task
         }
         else
@@ -155,8 +180,8 @@ template <typename ResultT> class task_entry
         if (next->m_is_on_exception)
         {
           // subtask contains the exception handler that doesn't break the execution of task chain
-          binder_t<const std::exception_ptr&>* subtask = static_cast<binder_t<const std::exception_ptr&>*>(next->m_u.subtask);
-          next->m_u.task = (*subtask)(std::current_exception());  // rebind
+          binder_t<const std::exception_ptr&>* subtask = static_cast<binder_t<const std::exception_ptr&>*>(next->m_callable.subtask());
+          next->m_callable.task((*subtask)(std::current_exception()));  // rebind
           delete subtask;
           next->m_deleter = task_t();           // disarm subtask deleter
           kickstart(next);                      // schedule next task
@@ -194,13 +219,16 @@ template<> class task_entry<void>
       }
       if (next != nullptr)
       {
-        if (next->m_u.subtask != nullptr)
+        if (next->m_callable)
         {
-          // no rebind necessary, just reassign and disarm deleter
-          void_binder_t* subtask = static_cast<void_binder_t*>(next->m_u.subtask);
-          next->m_u.task = (*subtask)();        // rebind
-          delete subtask;
-          next->m_deleter = task_t();           // disarm subtask deleter
+          if (next->m_callable.has_subtask())
+          {
+            // no rebind necessary, just reassign and disarm deleter
+            void_binder_t* subtask = static_cast<void_binder_t*>(next->m_callable.subtask());
+            next->m_callable.task((*subtask)());        // rebind
+            delete subtask;
+            next->m_deleter = task_t();           // disarm subtask deleter
+          }
           kickstart(next);                      // schedule next task
         }
         else
@@ -224,8 +252,8 @@ template<> class task_entry<void>
         if (next->m_is_on_exception)
         {
           // subtask contains the exception handler that doesn't break the execution of task chain
-          binder_t<const std::exception_ptr&>* subtask = static_cast<binder_t<const std::exception_ptr&>*>(next->m_u.subtask);
-          next->m_u.task = (*subtask)(std::current_exception());  // rebind
+          binder_t<const std::exception_ptr&>* subtask = static_cast<binder_t<const std::exception_ptr&>*>(next->m_callable.subtask());
+          next->m_callable.task((*subtask)(std::current_exception()));  // rebind
           delete subtask;
           next->m_deleter = task_t();           // disarm subtask deleter
           kickstart(next);                      // schedule next task
@@ -465,15 +493,15 @@ on_any_exception(const std::weak_ptr<runner>& runner_, std::function<Result(cons
   entrails::taskinfo* aux = new entrails::taskinfo(runner_);
   aux->m_is_on_exception = true;
 
-  aux->m_u.subtask = new subtask_t(std::bind(
+  aux->m_callable.subtask(new subtask_t(std::bind(
           entrails::subtask_binder<const std::exception_ptr&, Result, handler_t
         >::rebind
         , aux
         , std::placeholders::_1
         , std::forward<handler_t>(err_)
-  ));
+  )));
 
-  aux->m_deleter = std::bind(entrails::subtask_deleter<subtask_t>, aux->m_u.subtask);
+  aux->m_deleter = std::bind(entrails::subtask_deleter<subtask_t>, aux->m_callable.subtask());
 
   return aux;
 }
@@ -501,15 +529,15 @@ on_exception(const std::weak_ptr<runner>& runner_, std::function<Result(Exceptio
     }
   };
 
-  aux->m_u.subtask = new subtask_t(std::bind(
+  aux->m_callable.subtask(new subtask_t(std::bind(
           entrails::subtask_binder<const std::exception_ptr&, Result, handler_t
         >::rebind
         , aux
         , std::placeholders::_1
         , err_tc
-  ));
+  )));
 
-  aux->m_deleter = std::bind(entrails::subtask_deleter<subtask_t>, aux->m_u.subtask);
+  aux->m_deleter = std::bind(entrails::subtask_deleter<subtask_t>, aux->m_callable.subtask());
 
   return aux;
 }

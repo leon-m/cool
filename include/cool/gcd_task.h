@@ -26,6 +26,7 @@
 #include <exception>
 #include <atomic>
 #include <memory>
+#include <type_traits>
 #include <dispatch/dispatch.h>
 
 #include "entrails/platform.h"
@@ -745,7 +746,7 @@ template <typename Result> class task
     m_info->m_next = aux;  // double link
     aux->m_prev = m_info;
 
-    aux->m_u.subtask = new subtask_t(std::bind(
+    aux->m_callable.subtask(new subtask_t(std::bind(
             entrails::subtask_binder<Result, subtask_result_t, Function
 #if !defined(INCORRECT_VARIADIC)
           , Args...
@@ -757,12 +758,39 @@ template <typename Result> class task
 #if !defined(INCORRECT_VARIADIC)
           , std::forward<Args>(args_)...
 #endif
-    ));
+    )));
 
-    aux->m_deleter = std::bind(entrails::subtask_deleter<subtask_t>, aux->m_u.subtask);
+    aux->m_deleter = std::bind(entrails::subtask_deleter<subtask_t>, aux->m_callable.subtask());
     m_info = nullptr;     // invalidate state of current task
 
     return task<subtask_result_t>(aux);
+  }
+
+  /**
+   * Creates a new task by combining two existing tasks.
+   *
+   * This method templat combines this tasks with the task, specified as its parameter by
+   * by appending the sequence from the parameter task to the end of the sequence of this
+   * task and returns a new task with the merged sequence.
+   *
+   * @param task_ the task to be appended to this task
+   *
+   * @return a new task with the combined sequence.
+   *
+   * @exception cool::exception::illegal_state thrown if this task object is not valid
+   * @exception cool::exception::illegal_parameter thrown if the task object specified as paramter is not valid
+   * @exception cool::exception::operation_failed throw if the @ref finally() method was already
+   * used on this task object.
+   *
+   * @note This method is only available to the task objects of the specialized type @c task<void>.
+   * And attempt to use this method on any other specialization of @ref task class template will
+   * result in compilation errors.
+   * @note This method invalidates both this task and the task specified as the parameter.
+   */
+  template <typename T>
+  task<T> then_add(task<T>& task_)
+  {
+    static_assert(!std::is_same<T, void>::value, "this operation is only supported for task objects of task<void> type");
   }
 
   /**
@@ -864,7 +892,7 @@ template <typename Result> class task
    *    type must be the same as the @c ResultT, where ResultT is the type of the
    *    return value of this task's Callable.
    *    the Callable's only parameter must be @c const @c ExceptionT&, where ExceptionT
-   *    is the type of the exception that the Callable @err_ can handle.
+   *    is the type of the exception that the Callable @c err_ can handle.
    *
    * The method must be provided with the following parameters:
    * @param err_ the user supplied Callable to be scheduled for execution upon exception
@@ -1061,7 +1089,7 @@ template <typename Result> class task
   )
   {
     m_info = new entrails::taskinfo(runner_);
-    m_info->m_u.task = new entrails::task_t(std::bind(
+    m_info->m_callable.task(new entrails::task_t(std::bind(
         entrails::task_entry<Result>::entry_point
       , m_info
       , static_cast<std::function<Result()>>(
@@ -1072,7 +1100,7 @@ template <typename Result> class task
 #endif
           )
         )
-    ));
+    )));
   }
 
   template <typename T> friend class task;
@@ -1207,7 +1235,7 @@ template <> class task<void>
     m_info->m_next = aux;  // double link
     aux->m_prev = m_info;
 
-    aux->m_u.subtask = new subtask_t(std::bind(
+    aux->m_callable.subtask(new subtask_t(std::bind(
             entrails::subtask_binder<void, subtask_result_t, Function
 #if !defined(INCORRECT_VARIADIC)
           , Args...
@@ -1218,13 +1246,37 @@ template <> class task<void>
 #if !defined(INCORRECT_VARIADIC)
           , std::forward<Args>(args_)...
 #endif
-    ));
+    )));
 
-    aux->m_deleter = std::bind(entrails::subtask_deleter<subtask_t>, aux->m_u.subtask);
+    aux->m_deleter = std::bind(entrails::subtask_deleter<subtask_t>, aux->m_callable.subtask());
     m_info = nullptr;     // invalidate state of current task
 
     return task<subtask_result_t>(aux);
 
+  }
+
+  template <typename T>
+  task<T> then_add(task<T>& task_)
+  {
+    if (m_info == nullptr)
+      throw cool::exception::illegal_state("this task object is in undefined state");
+
+    if (task_.m_info == nullptr)
+      throw cool::exception::illegal_argument("the other task object is in undefined state");
+
+    if (m_info->m_next != nullptr && !m_info->m_next->m_callable)   // has finally task
+      throw cool::exception::operation_failed("this task was finalized with finally subtask");
+
+    auto aux = task_.m_info;
+    for ( ; aux->m_prev != nullptr; aux = aux->m_prev)
+    ;
+
+    aux->m_prev = m_info;
+    m_info->m_next = aux;
+
+    m_info = nullptr;  // invalidate this task
+
+    return  task<T>(std::move(task_));
   }
 
 
@@ -1337,7 +1389,7 @@ template <> class task<void>
 #endif
   {
     m_info = new entrails::taskinfo(runner_);
-    m_info->m_u.task = new entrails::task_t(std::bind(
+    m_info->m_callable.task(new entrails::task_t(std::bind(
         entrails::task_entry<void>::entry_point
       , m_info
       , static_cast<std::function<void()>>(
@@ -1348,7 +1400,7 @@ template <> class task<void>
 #endif
           )
         )
-    ));
+    )));
   }
 
   template <typename T> friend class task;

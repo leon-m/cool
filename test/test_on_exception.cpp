@@ -25,8 +25,9 @@
 #include <gtest/gtest.h>
 #include "cool/gcd_task.h"
 
-using namespace cool::basis;
+using ms = std::chrono::milliseconds;
 
+using namespace cool::basis;
 
 // Test for backward compatibility. Tasks with error handlers break execution chain
 TEST(on_exception, error_handling_tasks)
@@ -45,12 +46,10 @@ TEST(on_exception, error_handling_tasks)
         FAIL() << "Should not get here. No error";
       },
       [](){
-        std::cout << "task throwing" << std::endl;
         throw std::range_error("");
       }).
   then(
       [&mutexWait, &cvWait, &ok](const std::exception_ptr& ex){
-        std::cout << "expected" << std::endl;
         std::unique_lock<std::mutex> l(mutexWait);
         ok = true;
         cvWait.notify_one();
@@ -66,12 +65,12 @@ TEST(on_exception, error_handling_tasks)
         FAIL() << "Should not get here. Error handler above breaks the chain";
       });
 
+  std::unique_lock<std::mutex> l(mutexWait);
+
   task.run();
 
-  std::unique_lock<std::mutex> l(mutexWait);
-  cvWait.wait(l);
-
-  ASSERT_TRUE(ok);
+  EXPECT_TRUE(cvWait.wait_for(l, ms(100), [&ok] { return ok; }));
+  EXPECT_TRUE(ok);
 }
 
 TEST(on_exception, on_any_exception_void)
@@ -84,7 +83,6 @@ TEST(on_exception, on_any_exception_void)
 
   auto&& task = cool::gcd::task::factory::create(r,
       [](){
-        std::cout << "task 1 throwing" << std::endl;
         throw std::range_error("TestError");
       }).
   then_do(
@@ -97,7 +95,6 @@ TEST(on_exception, on_any_exception_void)
           std::rethrow_exception(ex_ptr);
         }
         catch (const std::range_error& ex) {
-          std::cout << __LINE__ << " handling: " << ex.what() << std::endl;
         }
       }).
   then(
@@ -110,12 +107,11 @@ TEST(on_exception, on_any_exception_void)
         cvWait.notify_one();
       });
 
+  std::unique_lock<std::mutex> l(mutexWait);
   task.run();
 
-  std::unique_lock<std::mutex> l(mutexWait);
-  cvWait.wait(l);
-
-  ASSERT_TRUE(ok);
+  EXPECT_TRUE(cvWait.wait_for(l, ms(100), [&ok] { return ok; }));
+  EXPECT_TRUE(ok);
 }
 
 TEST(on_exception, on_any_exception_typed)
@@ -128,7 +124,6 @@ TEST(on_exception, on_any_exception_typed)
 
   auto&& task = cool::gcd::task::factory::create(r,
       []()->std::string{
-        std::cout << "task 1 throwing" << std::endl;
         throw std::range_error("TestError");
       }).
   then_do(
@@ -141,7 +136,6 @@ TEST(on_exception, on_any_exception_typed)
           std::rethrow_exception(ex_ptr);
         }
         catch (const std::range_error& ex) {
-          std::cout << __LINE__ << " handling: " << ex.what() << std::endl;
           return "Correct";
         }
       }).
@@ -155,12 +149,11 @@ TEST(on_exception, on_any_exception_typed)
         cvWait.notify_one();
       });
 
+  std::unique_lock<std::mutex> l(mutexWait);
   task.run();
 
-  std::unique_lock<std::mutex> l(mutexWait);
-  cvWait.wait(l);
-
-  ASSERT_EQ("Correct", result);
+  EXPECT_TRUE(cvWait.wait_for(l, ms(100), [&result] { return result != ""; } ));
+  EXPECT_EQ("Correct", result);
 }
 
 // Test if various variants compile and are executed
@@ -189,12 +182,11 @@ TEST(on_exception, on_any_exception_variants)
         FAIL() << "Should not get here";
       });
 
+  std::unique_lock<std::mutex> l(mutexWait);
   task.run();
 
-  std::unique_lock<std::mutex> l(mutexWait);
-  cvWait.wait(l);
-
-  ASSERT_EQ(3, n);
+  EXPECT_TRUE(cvWait.wait_for(l, ms(100), [&n] { return n!= 0; } ));
+  EXPECT_EQ(3, n);
 }
 
 // Test for on_exception handling concrete type of exception.
@@ -208,7 +200,6 @@ TEST(on_exception, on_exception_void)
 
   auto&& task = cool::gcd::task::factory::create(r,
       [](){
-        std::cout << "task 1 throwing" << std::endl;
         throw std::range_error("TestError");
       }).
   then_do(
@@ -217,7 +208,6 @@ TEST(on_exception, on_exception_void)
       }).
   on_exception(r,
       [](const std::range_error& ex){
-        std::cout << __LINE__ << " handling: " << ex.what() << std::endl;
       }).
   then(
       [](const std::exception_ptr& ex){
@@ -229,12 +219,11 @@ TEST(on_exception, on_exception_void)
         cvWait.notify_one();
       });
 
+  std::unique_lock<std::mutex> l(mutexWait);
   task.run();
 
-  std::unique_lock<std::mutex> l(mutexWait);
-  cvWait.wait(l);
-
-  ASSERT_TRUE(ok);
+  EXPECT_TRUE(cvWait.wait_for(l, ms(100), [&ok] { return ok; }));
+  EXPECT_TRUE(ok);
 }
 
 // Test for on_exception handling concrete type of exception.
@@ -248,7 +237,6 @@ TEST(on_exception, on_exception_typed)
 
   auto&& task = cool::gcd::task::factory::create(r,
       []()->std::string{
-        std::cout << "task 1 throwing" << std::endl;
         throw std::range_error("TestError");
       }).
   then_do(
@@ -257,7 +245,6 @@ TEST(on_exception, on_exception_typed)
       }).
   on_exception(r,
       [](const std::range_error& ex)->std::string{
-        std::cout << __LINE__ << " handling: " << ex.what() << std::endl;
         return "Correct";
       }).
   then(
@@ -270,12 +257,11 @@ TEST(on_exception, on_exception_typed)
         cvWait.notify_one();
       });
 
+  std::unique_lock<std::mutex> l(mutexWait);
   task.run();
 
-  std::unique_lock<std::mutex> l(mutexWait);
-  cvWait.wait(l);
-
-  ASSERT_EQ("Correct", result);
+  EXPECT_TRUE(cvWait.wait_for(l,  ms(100), [&result] { return result != ""; }));
+  EXPECT_EQ("Correct", result);
 }
 
 // Test if various variants compile and are executed
@@ -290,7 +276,6 @@ TEST(on_exception, on_exception_variants)
   // no error handler takes the right exception type so none are executed
   auto&& task = cool::gcd::task::factory::create(r,
       [](){
-        std::cout << "task 1 throwing" << std::endl;
         throw std::overflow_error("TestError");
       })
   .on_exception(r, // int as exception is regular code
@@ -311,12 +296,11 @@ TEST(on_exception, on_exception_variants)
         FAIL() << "Should not get here";
       });
 
+  std::unique_lock<std::mutex> l(mutexWait);
   task.run();
 
-  std::unique_lock<std::mutex> l(mutexWait);
-  cvWait.wait(l);
-
-  ASSERT_EQ(1, n);
+  EXPECT_TRUE(cvWait.wait_for(l, ms(100), [&n] { return n != 0; }));
+  EXPECT_EQ(1, n);
 }
 
 // Test that irregular code doesn't compile
@@ -382,6 +366,8 @@ TEST(on_exception, task_chain)
   std::condition_variable cvWait;
   int result = 0;
 
+  std::unique_lock<std::mutex> l(mutexWait);
+
   cool::gcd::task::factory::create(r,
       []()->int{
         throw std::range_error("Test error");
@@ -392,22 +378,18 @@ TEST(on_exception, task_chain)
       }).
   on_exception(r,
       [](const std::underflow_error& ex) {
-        std::cout << "Should not get here. Incorrect exception type";
         ADD_FAILURE(); return -__LINE__;
       }).
   on_exception(r,
       [](const std::range_error& ex) {
-        std::cout << __LINE__ << " handling: " << ex.what() << std::endl;
         return 57;
       }).
   on_exception(r,
       [](const std::runtime_error& ex) {
-        std::cout << "Should not get here.";
         ADD_FAILURE(); return -__LINE__;
       }).
   on_any_exception(r,
       [](const std::exception_ptr& ex_ptr) {
-        std::cout << "Should not get here.";
         ADD_FAILURE(); return -__LINE__;
       }).
   then_do(
@@ -429,12 +411,9 @@ TEST(on_exception, task_chain)
       }).
   run();
 
-  std::unique_lock<std::mutex> l(mutexWait);
-  cvWait.wait(l);
-
-  ASSERT_EQ(57, result);
+  EXPECT_TRUE(cvWait.wait_for(l, ms(100), [&result] { return result != 0; }));
+  EXPECT_EQ(57, result);
 }
-
 
 // Test variants of then tasks returning void
 TEST(then, then_void_variants)
@@ -470,15 +449,15 @@ TEST(then, then_void_variants)
       })
   ;
 
+  std::unique_lock<std::mutex> l(mutexWait);
   task.run();
 
-  std::unique_lock<std::mutex> l(mutexWait);
-  cvWait.wait(l);
+  EXPECT_TRUE(cvWait.wait_for(l, ms(100), [&n] { return n != 0; }));
 
 #if !defined(INCORRECT_VARIADIC)
-  ASSERT_EQ(8, n);
+  EXPECT_EQ(8, n);
 #else
-  ASSERT_EQ(4, n);
+  EXPECT_EQ(4, n);
 #endif
 }
 
@@ -518,19 +497,183 @@ TEST(then, then_typed_variants)
       })
   ;
 
+  std::unique_lock<std::mutex> l(mutexWait);
   task.run();
 
-  std::unique_lock<std::mutex> l(mutexWait);
-  cvWait.wait(l);
+  EXPECT_TRUE(cvWait.wait_for(l, ms(100), [&result] { return result != 0; }));
 
 #if !defined(INCORRECT_VARIADIC)
-  ASSERT_EQ(8, result);
+  EXPECT_EQ(8, result);
 #else
-  ASSERT_EQ(4, result);
+  EXPECT_EQ(4, result);
 #endif
 }
 
 
 
+TEST(then_with_task, no_finally)
+{
+  auto&& r = std::make_shared<cool::gcd::task::runner>();
+  auto&& r2 = std::make_shared<cool::gcd::task::runner>();
 
+  std::mutex mutexWait;
+  std::condition_variable cvWait;
 
+  int result = 0;
+
+  {
+    result = 0;
+    std::unique_lock<std::mutex> l(mutexWait);
+
+#if !defined(INCORRECT_VARIADIC)
+    auto&& task_a = cool::gcd::task::factory::create(
+         r
+       , [ &result ] (int n)
+         {
+           result =  n+1;
+         }
+      , 1);
+#else
+    int n = 1;
+    auto&& task_a = cool::gcd::task::factory::create(
+        r
+      , [ &result, n ] ()
+      {
+        result =  n+1;
+      });
+#endif
+    auto&& task_b = cool::gcd::task::factory::create(
+        r
+      , [&result]
+        {
+          result = result + 1;
+        })
+    .then_do(
+       r,
+       [&mutexWait, &cvWait]( )
+       {
+         std::unique_lock<std::mutex> l(mutexWait);
+         cvWait.notify_one();
+       });
+
+    EXPECT_NO_THROW(task_a.then_add(task_b).run());
+
+    EXPECT_TRUE(cvWait.wait_for(l, ms(100), [&result] { return result != 0; } ));
+    EXPECT_EQ(3, result);
+  }
+  {
+    result = 0;
+    std::unique_lock<std::mutex> l(mutexWait);
+
+#if !defined(INCORRECT_VARIADIC)
+    auto&& task_a = cool::gcd::task::factory::create(
+        r, [ ] (int n) { return n+1; }, 1)
+#else
+    int n = 1;
+    auto&& task_a = cool::gcd::task::factory::create(
+        r, [n] () { return n+1; })
+#endif
+    .then_do([&result] (int n) { result = n + 1; });
+
+    auto&& task_b = cool::gcd::task::factory::create(
+        r2
+      , [&result] () { return result + 1; })
+    .then_do(r, [&result] (int n) { result = n + 1; })
+    .then_do(
+        r
+      , [&mutexWait, &cvWait, &result]()
+        {
+          std::unique_lock<std::mutex> l(mutexWait);
+          cvWait.notify_one();
+        }
+    );
+
+    EXPECT_NO_THROW(task_a.then_add(task_b).run());
+
+    EXPECT_TRUE(cvWait.wait_for(l, ms(100), [&result] { return result != 0; } ));
+    EXPECT_EQ(5, result);
+  }
+}
+
+TEST(then_with_task, failed_operation)
+{
+  auto&& r = std::make_shared<cool::gcd::task::runner>();
+
+  std::mutex mutexWait;
+  std::condition_variable cvWait;
+
+  int result = 0;
+
+  {
+    result = 0;
+    std::unique_lock<std::mutex> l(mutexWait);
+
+    auto&& task_a = cool::gcd::task::factory::create(
+        r
+      , [&result]
+        {
+          result = 5;
+        }
+    );
+
+    auto&& task_b = cool::gcd::task::factory::create(
+        r
+      , [&result, &mutexWait, &cvWait] ()
+      {
+        result = 10;
+        std::unique_lock<std::mutex> l(mutexWait);
+        cvWait.notify_one();
+      }
+    );
+
+    task_b.run();
+    EXPECT_TRUE(cvWait.wait_for(l, ms(100), [&result] { return result != 0; } ));
+    EXPECT_EQ(10, result);
+    EXPECT_THROW(task_a.then_add(task_b).run(), cool::exception::illegal_argument);
+  }
+
+  {
+    result = 0;
+    std::unique_lock<std::mutex> l(mutexWait);
+
+    auto&& task_a = cool::gcd::task::factory::create(
+        r
+      , [&result, &mutexWait, &cvWait]
+        {
+          result = 5;
+          std::unique_lock<std::mutex> l(mutexWait);
+          cvWait.notify_one();
+        }
+    );
+
+    auto&& task_b = cool::gcd::task::factory::create(
+        r
+      , [] () { return 5; }
+    );
+
+    task_a.run();
+    EXPECT_TRUE(cvWait.wait_for(l, ms(100), [&result] { return result != 0; } ));
+    EXPECT_EQ(5, result);
+    EXPECT_THROW(task_a.then_add(task_b).run(), cool::exception::illegal_state);
+  }
+
+  {
+    result = 0;
+    std::unique_lock<std::mutex> l(mutexWait);
+
+    auto&& task_a = cool::gcd::task::factory::create(
+        r
+      , [&result]
+        {
+          result = 5;
+        })
+    .finally([] (const std::exception_ptr& e) { });
+
+    auto&& task_b = cool::gcd::task::factory::create(
+        r
+      , [] () { return 5; }
+    );
+//    task_a.show();
+    EXPECT_THROW(task_a.then_add(task_b).run(), cool::exception::operation_failed);
+  }
+}

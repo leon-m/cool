@@ -20,6 +20,7 @@
  */
 
 #include <iostream>
+#include <iomanip>
 #include <sstream>
 
 #if defined(WIN32_TARGET)
@@ -33,14 +34,19 @@ namespace cool { namespace gcd { namespace task {
 namespace entrails
 {
 
+taskinfo* start(taskinfo* p)
+{
+  for ( ; p->m_prev != nullptr; p = p->m_prev)
+  ;
+  return p;
+}
+
 taskinfo::taskinfo(const std::weak_ptr<runner>& r)
   : m_runner(r)
   , m_next(nullptr)
   , m_prev(nullptr)
   , m_is_on_exception(false)
-{
-  m_u.task = nullptr;
-}
+{ /* noop */ }
 
 taskinfo::taskinfo(entrails::task_t* t, const std::weak_ptr<runner>& r)
   : m_runner(r)
@@ -48,7 +54,7 @@ taskinfo::taskinfo(entrails::task_t* t, const std::weak_ptr<runner>& r)
   , m_prev(nullptr)
   , m_is_on_exception(false)
 {
-  m_u.task = t;
+  m_callable.task(t);
 }
 
 void cleanup_reverse(taskinfo* info_)
@@ -72,12 +78,12 @@ void cleanup(taskinfo* info_)
 
 taskinfo::~taskinfo()
 {
-  if (m_u.task != nullptr)
+  if (m_callable)
   {
     if (m_deleter)
       m_deleter();
     else
-      delete m_u.task;
+      delete m_callable.task();
   }
 }
 
@@ -105,7 +111,8 @@ void kickstart(taskinfo* info_, const std::exception_ptr& e_)
 // executor for task::run()
 void task_executor(void* ctx)
 {
-  (*static_cast<taskinfo*>(ctx)->m_u.task)();
+  taskinfo* aux = static_cast<taskinfo*>(ctx);
+  (*aux->m_callable.task())();
 }
 
 // executor for runner::run()
