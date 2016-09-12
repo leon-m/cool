@@ -131,7 +131,7 @@ if (OSX)
 endif()
 
 if (WIN32)
-  set (CMAKE_CXX_FLAGS "/EHs")
+  set (CMAKE_CXX_FLAGS "/EHsc")
 else()
   set (CMAKE_CXX_FLAGS "-std=c++11 -g ${DISABLED_WARNINGS}")
 endif()
