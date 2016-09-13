@@ -1,0 +1,51 @@
+
+#  Google Test download and build
+###################################################################
+set (GTEST_VERSION 1.8.0)
+INCLUDE(ExternalProject)
+
+# Set default ExternalProject root directory
+SET_DIRECTORY_PROPERTIES(PROPERTIES EP_PREFIX ${CMAKE_BINARY_DIR}/third_party)
+
+# Add gtest
+# http://stackoverflow.com/questions/9689183/cmake-googletest
+ExternalProject_Add(
+    googletest
+    URL https://github.com/google/googletest/archive/release-${GTEST_VERSION}.zip
+    TIMEOUT 100
+    # # Force separate output paths for debug and release builds to allow easy
+    # # identification of correct lib in subsequent TARGET_LINK_LIBRARIES commands
+    # CMAKE_ARGS -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG:PATH=DebugLibs
+    #            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE:PATH=ReleaseLibs
+    #            -Dgtest_force_shared_crt=ON
+    # Disable install step
+    INSTALL_COMMAND ""
+    # Wrap download, configure and build steps in a script to log output
+    LOG_DOWNLOAD ON
+    LOG_CONFIGURE ON
+    LOG_BUILD ON)
+
+# Specify include dir
+ExternalProject_Get_Property(googletest source_dir)
+set(GTEST_INCLUDE_DIR ${source_dir}/googletest/include)
+
+# Library
+ExternalProject_Get_Property(googletest binary_dir)
+set(GTEST_LIBRARY_PATH ${binary_dir}/googlemock/gtest/${CMAKE_CFG_INTDIR})
+set(GTEST_LIBRARY gtest)
+set(GTEST_LIBRARY_MAIN gtest_main)
+
+add_library(${GTEST_LIBRARY} UNKNOWN IMPORTED)
+set_property(TARGET ${GTEST_LIBRARY} PROPERTY IMPORTED_LOCATION
+                ${GTEST_LIBRARY_PATH}/${CMAKE_STATIC_LIBRARY_PREFIX}${GTEST_LIBRARY}${CMAKE_STATIC_LIBRARY_SUFFIX} )
+add_dependencies(${GTEST_LIBRARY} googletest)
+add_library(${GTEST_LIBRARY_MAIN} UNKNOWN IMPORTED)
+set_property(TARGET ${GTEST_LIBRARY_MAIN} PROPERTY IMPORTED_LOCATION
+                ${GTEST_LIBRARY_PATH}/${CMAKE_STATIC_LIBRARY_PREFIX}${GTEST_LIBRARY_MAIN}${CMAKE_STATIC_LIBRARY_SUFFIX} )
+add_dependencies(${GTEST_LIBRARY_MAIN} googletest)
+
+include_directories(${GTEST_INCLUDE_DIR})
+link_directories(${GTEST_LIBRARY_PATH})
+
+# end of Google test download and build
+###################################################################

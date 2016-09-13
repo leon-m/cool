@@ -54,4 +54,7 @@
 #  define INCORRECT_VARIADIC
 #endif
 
+#undef dlldecl
+#define dlldecl
+
 #endif

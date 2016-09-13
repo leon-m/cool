@@ -8,7 +8,6 @@ cmake_minimum_required(VERSION 2.8)
 #  COOL_HOME         top level source directory
 #  COOL_LIBRARY_DIR  location of build library
 #  COOL_LIBRARY_NAME the name of the library
-#  COOL_DYNAMIC      if true builds dynamic library, static otherwise
 #  COOL_TEST_DIR     location of built tests, if enabled
 #  COOL_BUILD_TEST   build test programs (true/false)
 #  COOL_BUILD_DOC    build HTML documentation, requires doxygen (true/false)
@@ -23,34 +22,20 @@ cmake_minimum_required(VERSION 2.8)
 ## #######################################################################
 
 # version number and SOVERSION
-set (COOL_VERSION "0.0.0")
-set (COOL_SOVERSION "0")
+set (COOL_NAME cool2)
+set (COOL_VERSION "2.0.0")
+set (COOL_SOVERSION "2")
+set (STATIC_LIB_SFX -static)
+set (DYNAMIC_LIB_SFX -dynamic)
 
-# defaults if input variables aren't set
+# -- platform detection
+include (cmake/platform)
 
-if (NOT DEFINED COOL_HOME)
-  set (COOL_HOME ${CMAKE_CURRENT_LIST_DIR})
-endif()
-if (NOT DEFINED COOL_LIBRARY_DIR)
-  if (WIN32)
-    set (COOL_LIBRARY_DIR ${CMAKE_BINARY_DIR}/bin)
-  else()
-    set (COOL_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib)
-  endif()
-endif()
 
-if (NOT DEFINED COOL_DYNAMIC)
-  set (COOL_DYNAMIC true)
-endif()
-if (NOT DEFINED COOL_TEST_DIR)
-  if (WIN32)
-    set (COOL_TEST_DIR ${CMAKE_BINARY_DIR}/bin)
-  else()
-    set (COOL_TEST_DIR ${CMAKE_BINARY_DIR}/test)
-  endif()
-endif()
+# -- defaults if input variables aren't set
+
 if (NOT DEFINED COOL_LIBRARY_NAME)
-  set (COOL_LIBRARY_NAME cool)
+  set (COOL_LIBRARY_NAME ${COOL_NAME})
 endif()
 if (NOT DEFINED COOL_BUILD_TEST)
   set (COOL_BUILD_TEST true)
@@ -58,71 +43,57 @@ endif()
 if (NOT DEFINED COOL_BUILD_DOC)
   set (COOL_BUILD_DOC true)
 endif()
+
+# --- directories
+if (NOT DEFINED COOL_HOME)
+  set (COOL_HOME ${CMAKE_CURRENT_LIST_DIR})
+endif()
+if (NOT DEFINED COOL_LIBRARY_DIR)
+  if (WINDOWS)
+    set (COOL_LIBRARY_DIR ${CMAKE_BINARY_DIR}/bin)
+  else()
+    set (COOL_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib)
+  endif()
+endif()
+if (NOT DEFINED COOL_TEST_DIR)
+  if (WINDOWS)
+    set (COOL_TEST_DIR ${CMAKE_BINARY_DIR}/bin)
+  else()
+    set (COOL_TEST_DIR ${CMAKE_BINARY_DIR}/test)
+  endif()
+endif()
 if (NOT DEFINED COOL_DOC_DIR)
   set (COOL_DOC_DIR ${CMAKE_BINARY_DIR}/doc)
 endif()
 
-if (COOL_HAVE_GTEST)
-  if (NOT DEFINED COOL_GTEST_LIB)
-    message (FATAL_ERROR "COOL_GTEST_LIB must be set if COOL_HAVE_GTEST is true")
-  endif()
-else()
-  set (COOL_GTEST_LIB gtest)
-endif()
-
-# platform detection
-set (OSX false)
-set (LINUX false)
-set (WIN32 false)
-if (${CMAKE_SYSTEM_NAME} MATCHES  "Darwin")
-  message("   Build COOL library on Apple OS/X")
-  set (OSX true)
-  set (TARGET APPLE_TARGET)
-elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-  message("   Build COOL library on Linux")
-  set (TARGET LINUX_TARGET)
-  set (LINUX true)
-elseif (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-  message("   Build COOL library on Microsoft Windows from ${COOL_HOME}")
-  set (TARGET WIN32_TARGET)
-  set (WIN32 true)
-  set (xdispatch_DIR externals/xdispatch)
-else()
-  message("*********************** Unknown platform, expect errors")
-  error("Told you so")
-endif()
-
-if (COOL_DYNAMIC)
-  message ("-- Library format: dynamic library")
-else()
-  message ("-- Library format: static library")
-endif()
-message ("-- Build test programs: ${COOL_BUILD_TEST}")
-message ("-- Build documentation: ${COOL_BUILD_DOC}")
-
+message (STATUS "  build test programs: ${COOL_BUILD_TEST}")
+message (STATUS "  build documentation: ${COOL_BUILD_DOC}")
 
 # set output variables
 if (OSX)
   set (COOL_LINK_LIBRARIES)
-elseif(LINUX)
+elseif (LINUX)
   set (COOL_LINK_LIBRARIES dispatch pthread)
 else()
   set (COOL_LINK_LIBRARIES dispatch)
 endif()
+
+set (COOL_STATIC_LIBRARY_NAME ${COOL_LIBRARY_NAME}${STATIC_LIB_SFX})
+set (COOL_DYNAMIC_LIBRARY_NAME ${COOL_LIBRARY_NAME}${DYNAMIC_LIB_SFX})
 set (COOL_LIBS ${COOL_LIBRARY_NAME} ${COOL_LINK_LIBRARIES})
 
 get_directory_property(hasParent PARENT_DIRECTORY)
 if (hasParent)
-set (COOL_INCLUDE ${COOL_HOME}/include PARENT_SCOPE)
-set (COOL_LIBS ${COOL_LIBS} PARENT_SCOPE)
-set (COOL_VERSION ${COOL_VERSION} PARENT_SCOPE)
-set (COOL_SOVERSION ${COOL_SOVERSION} PARENT_SCOPE)
+  set (COOL_INCLUDE ${COOL_HOME}/include PARENT_SCOPE)
+  set (COOL_LIBS ${COOL_LIBS} PARENT_SCOPE)
+  set (COOL_VERSION ${COOL_VERSION} PARENT_SCOPE)
+  set (COOL_SOVERSION ${COOL_SOVERSION} PARENT_SCOPE)
 endif()
 
 add_definitions(-D${TARGET})
 
 include_directories(${COOL_HOME}/include /usr/local/include)
-if (WIN32)
+if (WINDOWS)
   include_directories(${xdispatch_DIR}/libdispatch/include)
 endif()
 
@@ -130,13 +101,14 @@ if (OSX)
   set(DISABLED_WARNINGS -Wno-undefined-bool-conversion)
 endif()
 
-if (WIN32)
-  set (CMAKE_CXX_FLAGS "/EHsc")
+if (WINDOWS)
+  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
+  set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /EHsc /MTd")
 else()
   set (CMAKE_CXX_FLAGS "-std=c++11 -g ${DISABLED_WARNINGS}")
 endif()
 
-if (WIN32)
+if (WINDOWS)
   add_subdirectory(externals/xdispatch)
 endif()
 
@@ -147,7 +119,7 @@ set (COOL_SRCS
      ${COOL_HOME}/lib/gcd_async.cpp
 )
 if (OSX OR LINUX)
-  set (COOL_SRCS ${COOL_SRCS} ${COOL_HOME}/lib/ip_address.cpp )
+  set (COOL_SRCS ${COOL_SRCS} ${COOL_HOME}/lib/ip_address.cpp)
 endif()
 
 set (COOL_HEADERS
@@ -177,22 +149,31 @@ source_group("Api Header Files" FILES ${COOL_HEADERS})
 source_group("Impl Header Files" FILES ${COOL_IMPL_HEADERS})
 source_group("Impl Source Files" FILES ${COOL_SRCS})
 
-if (COOL_DYNAMIC)
-  add_library(${COOL_LIBRARY_NAME} SHARED ${COOL_SRCS} ${COOL_HEADERS} ${COOL_IMPL_HEADERS})
-  set_target_properties(${COOL_LIBRARY_NAME} PROPERTIES VERSION ${COOL_VERSION})
-  set_target_properties(${COOL_LIBRARY_NAME} PROPERTIES SOVERSION ${COOL_SOVERSION})
-  if (WIN32)
-    set_target_properties(${COOL_LIBRARY_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${COOL_LIBRARY_DIR})
-    set_target_properties(${COOL_LIBRARY_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${COOL_LIBRARY_DIR})
+# -- dynamic library
+if (NOT WINDOWS)
+
+  add_library (${COOL_DYNAMIC_LIBRARY_NAME} SHARED ${COOL_SRCS} ${COOL_HEADERS} ${COOL_IMPL_HEADERS})
+  set_target_properties (${COOL_DYNAMIC_LIBRARY_NAME} PROPERTIES
+      OUTPUT_NAME ${COOL_NAME}
+      VERSION ${COOL_VERSION}
+      SOVERSION ${COOL_SOVERSION}
+  )
+  if (WINDOWS)
+    set_target_properties (${COOL_DYNAMIC_LIBRARY_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${COOL_LIBRARY_DIR})
+    set_target_properties (${COOL_DYNAMIC_LIBRARY_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${COOL_LIBRARY_DIR})
   else()
-    set_target_properties(${COOL_LIBRARY_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${COOL_LIBRARY_DIR})
+    set_target_properties (${COOL_DYNAMIC_LIBRARY_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${COOL_LIBRARY_DIR})
   endif()
-else()
-  add_library(${COOL_LIBRARY_NAME} STATIC ${COOL_SRCS} ${COOL_HEADERS} ${COOL_IMPL_HEADERS})
-  set_target_properties(${COOL_LIBRARY_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${COOL_LIBRARY_DIR})
+  target_link_libraries (${COOL_DYNAMIC_LIBRARY_NAME} ${COOL_LINK_LIBRARIES})
+
 endif()
 
-target_link_libraries(${COOL_LIBRARY_NAME} ${COOL_LINK_LIBRARIES})
+# -- static library
+add_library(${COOL_STATIC_LIBRARY_NAME} STATIC ${COOL_SRCS} ${COOL_HEADERS} ${COOL_IMPL_HEADERS})
+set_target_properties(${COOL_STATIC_LIBRARY_NAME} PROPERTIES
+  OUTPUT_NAME ${COOL_NAME}
+  ARCHIVE_OUTPUT_DIRECTORY ${COOL_LIBRARY_DIR}
+)
 
 # --- Tests
 set (TESTS
@@ -200,7 +181,7 @@ set (TESTS
    on_exception
 )
 
-if( NOT WIN32 )
+if( NOT WINDOWS )
   set (TESTS ${TESTS}
     reader_writer
   )
@@ -209,6 +190,7 @@ endif()
 # --- Doxygen documentation
 
 if (COOL_BUILD_DOC)
+
   find_package(Doxygen)
   if (NOT Doxygen_FOUND)
     message(WARNING "Doxygen package not found, will not generate documentation")
@@ -225,71 +207,28 @@ if (COOL_BUILD_DOC)
       DEPENDS ${COOL_HEADERS}
       WORKING_DIRECTORY ${COOL_DOC_DIR}
     )
-    add_custom_target(doc DEPENDS ${COOL_DOC_DIR}/doc/html/index.html)
-    add_dependencies(${COOL_LIBRARY_NAME} doc)
+    add_custom_target(doc ALL DEPENDS ${COOL_DOC_DIR}/doc/html/index.html)
   endif()
+
 endif()
 
 # --- Google test
 
 if (COOL_BUILD_TEST)
 
-  #  Google Test download and build
-  ###################################################################
-  set (GTEST_VERSION 1.8.0)
-  INCLUDE(ExternalProject)
-
-  # Set default ExternalProject root directory
-  SET_DIRECTORY_PROPERTIES(PROPERTIES EP_PREFIX ${CMAKE_BINARY_DIR}/third_party)
-
-  # Add gtest
-  # http://stackoverflow.com/questions/9689183/cmake-googletest
-  ExternalProject_Add(
-      googletest
-      URL https://github.com/google/googletest/archive/release-${GTEST_VERSION}.zip
-      TIMEOUT 100
-      # # Force separate output paths for debug and release builds to allow easy
-      # # identification of correct lib in subsequent TARGET_LINK_LIBRARIES commands
-      # CMAKE_ARGS -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG:PATH=DebugLibs
-      #            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE:PATH=ReleaseLibs
-      #            -Dgtest_force_shared_crt=ON
-      # Disable install step
-      INSTALL_COMMAND ""
-      # Wrap download, configure and build steps in a script to log output
-      LOG_DOWNLOAD ON
-      LOG_CONFIGURE ON
-      LOG_BUILD ON)
-
-  # Specify include dir
-  ExternalProject_Get_Property(googletest source_dir)
-  set(GTEST_INCLUDE_DIR ${source_dir}/googletest/include)
-
-  # Library
-  ExternalProject_Get_Property(googletest binary_dir)
-  set(GTEST_LIBRARY_PATH ${binary_dir}/googlemock/gtest/${CMAKE_CFG_INTDIR})
-  set(GTEST_LIBRARY gtest)
-  set(GTEST_LIBRARY_MAIN gtest_main)
-
-  add_library(${GTEST_LIBRARY} UNKNOWN IMPORTED)
-  set_property(TARGET ${GTEST_LIBRARY} PROPERTY IMPORTED_LOCATION
-                  ${GTEST_LIBRARY_PATH}/${CMAKE_STATIC_LIBRARY_PREFIX}${GTEST_LIBRARY}${CMAKE_STATIC_LIBRARY_SUFFIX} )
-  add_dependencies(${GTEST_LIBRARY} googletest)
-  add_library(${GTEST_LIBRARY_MAIN} UNKNOWN IMPORTED)
-  set_property(TARGET ${GTEST_LIBRARY_MAIN} PROPERTY IMPORTED_LOCATION
-                  ${GTEST_LIBRARY_PATH}/${CMAKE_STATIC_LIBRARY_PREFIX}${GTEST_LIBRARY_MAIN}${CMAKE_STATIC_LIBRARY_SUFFIX} )
-  add_dependencies(${GTEST_LIBRARY_MAIN} googletest)
-
-  include_directories(${GTEST_INCLUDE_DIR})
-  link_directories(${GTEST_LIBRARY_PATH})
-
-  # end of Google test download and build
-  ###################################################################
+  include (cmake/gtest)
 
   foreach (test ${TESTS})
+
     add_executable (test_${test} ${COOL_HOME}/test/test_${test}.cpp)
-    target_link_libraries(test_${test} ${GTEST_LIBRARY} ${GTEST_LIBRARY_MAIN} ${COOL_LIBS}  )
+    if ( WINDOWS )
+      target_link_libraries(test_${test} ${GTEST_LIBRARY} ${GTEST_LIBRARY_MAIN} ${COOL_STATIC_LIBRARY_NAME} ${COOL_LINK_LIBRARIES}  )
+    else()
+      target_link_libraries(test_${test} ${GTEST_LIBRARY} ${GTEST_LIBRARY_MAIN} ${COOL_DYNAMIC_LIBRARY_NAME} ${COOL_LINK_LIBRARIES}  )
+    endif()
 
     set_target_properties(test_${test} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${COOL_TEST_DIR})
+
   endforeach()
 
 endif()

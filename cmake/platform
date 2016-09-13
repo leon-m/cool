@@ -1,0 +1,32 @@
+
+# platform auto-detection
+
+set (OSX false)
+set (LINUX false)
+set (WINDOWS false)
+
+if (${CMAKE_SYSTEM_NAME} MATCHES  "Darwin")
+
+  message(STATUS "Build COOL library on Apple OS/X")
+  set (OSX true)
+  set (TARGET APPLE_TARGET)
+
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+
+  message(STATUS "Build COOL library on Linux")
+  set (LINUX true)
+  set (TARGET LINUX_TARGET)
+
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+
+  message(STATUS "Build COOL library on Microsoft Windows from ${COOL_HOME}")
+  set (WINDOWS true)
+  set (TARGET WINDOWS_TARGET)
+  set (xdispatch_DIR externals/xdispatch)
+
+else()
+
+  message(FATAL_ERROR "*********************** Unknown platform, cannot proceed")
+
+endif()
+
