@@ -1,4 +1,4 @@
-/* Copyright (c) 2015 Digiverse d.o.o.
+/* Copyright (c) 2016 Digiverse d.o.o.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License. The
@@ -19,39 +19,25 @@
  * IN THE SOFTWARE.
  */
 
-#if !defined(DLL_DECL_H_HEADER_GUARD)
-#define DLL_DECL_H_HEADER_GUARD
+#if !defined(COOL_IMPL_ASYNC_H_HEADER_GUARD)
+#define COOL_IMPL_ASYNC_H_HEADER_GUARD
 
-#if !defined(WIN32_TARGET)
-#  if defined(_MSC_VER)
-#    define WIN32_TARGET
-#  endif
-#endif
-
-#if !defined(APPLE_TARGET)
-#  if defined(__APPLE__)
-#    define APPLE_TARGET
-#  endif
-#endif
-
-#if !defined(LINUX_TARGET)
-#  if defined(__linux)
-#    define LINUX_TARGET
-#  endif
-#endif
-
-#if defined(WIN32_TARGET) && !defined(COOL_STATIC)
-#  if defined(COOL_BUILD)
-#    define dlldecl __declspec( dllexport )
+#if !defined(COOL_USE_ASYNC_PLATFORM)
+#  if defined(WINDOWS_TARGET)
+#    define COOL_USE_ASYNC_PLATFORM worker
 #  else
-#    define dlldecl __declspec( dllimport )
+#    define COOL_USE_ASYNC_PLATFORM gcd
 #  endif
-#else
-#  define dlldecl
 #endif
 
-#if defined(WIN32_TARGET)
-#  define INCORRECT_VARIADIC
+#if COOL_USE_ASYNC_PLATFORM == gcd
+
+#include "gcd/runner.h"
+
+#else
+
+# error "unsupported async platform" COOL_USE_ASYNC_PLATFORM
+
 #endif
 
 #endif

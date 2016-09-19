@@ -31,7 +31,6 @@ set (DYNAMIC_LIB_SFX -dynamic)
 # -- platform detection
 include (cmake/platform)
 
-
 # -- defaults if input variables aren't set
 
 if (NOT DEFINED COOL_LIBRARY_NAME)
@@ -48,16 +47,18 @@ endif()
 if (NOT DEFINED COOL_HOME)
   set (COOL_HOME ${CMAKE_CURRENT_LIST_DIR})
 endif()
+
 if (NOT DEFINED COOL_LIBRARY_DIR)
-  if (WINDOWS)
-    set (COOL_LIBRARY_DIR ${CMAKE_BINARY_DIR}/bin)
-  else()
-    set (COOL_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib)
-  endif()
+  set (COOL_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib)
 endif()
+
+if (NOT DEFINED COOL_BINARY_DIR)
+  set (COOL_BINARY_DIR ${CMAKE_BINARY_DIR}/bin)
+endif()
+
 if (NOT DEFINED COOL_TEST_DIR)
   if (WINDOWS)
-    set (COOL_TEST_DIR ${CMAKE_BINARY_DIR}/bin)
+    set (COOL_TEST_DIR ${COOL_BINARY_DIR})
   else()
     set (COOL_TEST_DIR ${CMAKE_BINARY_DIR}/test)
   endif()
@@ -90,9 +91,7 @@ if (hasParent)
   set (COOL_SOVERSION ${COOL_SOVERSION} PARENT_SCOPE)
 endif()
 
-add_definitions(-D${TARGET})
-
-include_directories(${COOL_HOME}/include /usr/local/include)
+include_directories(/usr/local/include ${COOL_HOME}/include)
 if (WINDOWS)
   include_directories(${xdispatch_DIR}/libdispatch/include)
 endif()
@@ -113,6 +112,10 @@ if (WINDOWS)
 endif()
 
 set (COOL_SRCS
+     ${COOL_HOME}/impl/src/async.cpp
+     ${COOL_HOME}/impl/src/named.cpp
+     ${COOL_HOME}/impl/src/gcd/runner.cpp
+# -- old stuff
      ${COOL_HOME}/lib/miscellaneous.cpp
      ${COOL_HOME}/lib/vow.cpp
      ${COOL_HOME}/lib/gcd_task.cpp
@@ -123,6 +126,11 @@ if (OSX OR LINUX)
 endif()
 
 set (COOL_HEADERS
+    ${COOL_HOME}/include/cool2/named.h
+    ${COOL_HOME}/include/cool2/async.h
+    ${COOL_HOME}/include/cool2/impl/platform.h
+    ${COOL_HOME}/include/cool2/impl/traits.h
+#-- old stuff
     ${COOL_HOME}/include/cool/cool.h
     ${COOL_HOME}/include/cool/exception.h
     ${COOL_HOME}/include/cool/miscellaneous.h
@@ -131,15 +139,20 @@ set (COOL_HEADERS
     ${COOL_HOME}/include/cool/gcd_async.h
     ${COOL_HOME}/include/cool/binary.h
 )
+
 if (OSX OR LINUX)
   set (COOL_HEADERS ${COOL_HEADERS} ${COOL_HOME}/include/cool/ip_address.h)
 endif()
 
 set (COOL_IMPL_HEADERS
+    ${COOL_HOME}/impl/include/impl/async.h
+    ${COOL_HOME}/impl/include/impl/gcd/runner.h
+    #-- old stuff
     ${COOL_HOME}/include/cool/entrails/vow.h
     ${COOL_HOME}/include/cool/entrails/gcd_task.h
     ${COOL_HOME}/include/cool/entrails/gcd_async.h
     ${COOL_HOME}/include/cool/entrails/platform.h
+    ${COOL_HOME}/include/cool/entrails/traits.h
 )
 if (OSX OR LINUX)
   set (COOL_IMPL_HEADERS ${COOL_IMPL_HEADERS} ${COOL_HOME}/include/cool/entrails/ip_address.h)
@@ -150,33 +163,38 @@ source_group("Impl Header Files" FILES ${COOL_IMPL_HEADERS})
 source_group("Impl Source Files" FILES ${COOL_SRCS})
 
 # -- dynamic library
-if (NOT WINDOWS)
-
-  add_library (${COOL_DYNAMIC_LIBRARY_NAME} SHARED ${COOL_SRCS} ${COOL_HEADERS} ${COOL_IMPL_HEADERS})
+add_library (${COOL_DYNAMIC_LIBRARY_NAME} SHARED ${COOL_SRCS} ${COOL_HEADERS} ${COOL_IMPL_HEADERS})
+set_target_properties (${COOL_DYNAMIC_LIBRARY_NAME} PROPERTIES
+    COMPILE_DEFINITIONS "${TARGET};COOL_BUILD"
+    OUTPUT_NAME ${COOL_NAME}
+    VERSION ${COOL_VERSION}
+    SOVERSION ${COOL_SOVERSION}
+    FOLDER Cool2
+)
+if (WINDOWS)
   set_target_properties (${COOL_DYNAMIC_LIBRARY_NAME} PROPERTIES
-      OUTPUT_NAME ${COOL_NAME}
-      VERSION ${COOL_VERSION}
-      SOVERSION ${COOL_SOVERSION}
+      RUNTIME_OUTPUT_DIRECTORY ${COOL_BINARY_DIR}
+      ARCHIVE_OUTPUT_DIRECTORY ${COOL_BINARY_DIR}
   )
-  if (WINDOWS)
-    set_target_properties (${COOL_DYNAMIC_LIBRARY_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${COOL_LIBRARY_DIR})
-    set_target_properties (${COOL_DYNAMIC_LIBRARY_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${COOL_LIBRARY_DIR})
-  else()
-    set_target_properties (${COOL_DYNAMIC_LIBRARY_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${COOL_LIBRARY_DIR})
-  endif()
-  target_link_libraries (${COOL_DYNAMIC_LIBRARY_NAME} ${COOL_LINK_LIBRARIES})
-
+else()
+  set_target_properties (${COOL_DYNAMIC_LIBRARY_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${COOL_LIBRARY_DIR})
 endif()
+target_link_libraries (${COOL_DYNAMIC_LIBRARY_NAME} ${COOL_LINK_LIBRARIES})
+target_include_directories (${COOL_DYNAMIC_LIBRARY_NAME} PRIVATE ${COOL_HOME}/impl/include)
 
 # -- static library
 add_library(${COOL_STATIC_LIBRARY_NAME} STATIC ${COOL_SRCS} ${COOL_HEADERS} ${COOL_IMPL_HEADERS})
 set_target_properties(${COOL_STATIC_LIBRARY_NAME} PROPERTIES
+  COMPILE_DEFINITIONS "COOL_STATIC;${TARGET};COOL_BUILD"
   OUTPUT_NAME ${COOL_NAME}
   ARCHIVE_OUTPUT_DIRECTORY ${COOL_LIBRARY_DIR}
+  FOLDER Cool2
 )
+target_include_directories (${COOL_STATIC_LIBRARY_NAME} PRIVATE ${COOL_HOME}/impl/include)
 
 # --- Tests
 set (TESTS
+   2_runner
    runner
    on_exception
 )
@@ -207,28 +225,41 @@ if (COOL_BUILD_DOC)
       DEPENDS ${COOL_HEADERS}
       WORKING_DIRECTORY ${COOL_DOC_DIR}
     )
-    add_custom_target(doc ALL DEPENDS ${COOL_DOC_DIR}/doc/html/index.html)
+    add_custom_target(Documentation ALL DEPENDS ${COOL_DOC_DIR}/doc/html/index.html)
   endif()
 
 endif()
 
-# --- Google test
+# --- Tests
 
 if (COOL_BUILD_TEST)
 
-  include (cmake/gtest)
+  if (NOT GTEST_LIBRARY)
+    include (cmake/gtest)
+  endif()
 
   foreach (test ${TESTS})
 
-    add_executable (test_${test} ${COOL_HOME}/test/test_${test}.cpp)
+    set (test_target test_${test})
+    add_executable (test_${test} ${COOL_HOME}/test/${test_target}.cpp)
     if ( WINDOWS )
-      target_link_libraries(test_${test} ${GTEST_LIBRARY} ${GTEST_LIBRARY_MAIN} ${COOL_STATIC_LIBRARY_NAME} ${COOL_LINK_LIBRARIES}  )
+      target_link_libraries(${test_target} ${GTEST_LIBRARY} ${GTEST_LIBRARY_MAIN} ${COOL_STATIC_LIBRARY_NAME} ${COOL_LINK_LIBRARIES}  )
+    set_target_properties (${test_target} PROPERTIES COMPILE_DEFINITIONS COOL_STATIC)
     else()
-      target_link_libraries(test_${test} ${GTEST_LIBRARY} ${GTEST_LIBRARY_MAIN} ${COOL_DYNAMIC_LIBRARY_NAME} ${COOL_LINK_LIBRARIES}  )
+      target_link_libraries(${test_target} ${GTEST_LIBRARY} ${GTEST_LIBRARY_MAIN} ${COOL_DYNAMIC_LIBRARY_NAME} ${COOL_LINK_LIBRARIES}  )
     endif()
 
-    set_target_properties(test_${test} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${COOL_TEST_DIR})
+    set_target_properties (${test_target} PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${COOL_TEST_DIR}
+        FOLDER Tests
+    )
 
   endforeach()
 
+  # this is very specific tests that only needs to compile
+  add_executable (test_compilation ${COOL_HOME}/test/test_compilation.cpp)
+  set_target_properties (test_compilation PROPERTIES
+      RUNTIME_OUTPUT_DIRECTORY ${COOL_TEST_DIR}
+      FOLDER Tests
+  )
 endif()

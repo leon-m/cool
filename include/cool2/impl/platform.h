@@ -19,8 +19,8 @@
  * IN THE SOFTWARE.
  */
 
-#if !defined(DLL_DECL_H_HEADER_GUARD)
-#define DLL_DECL_H_HEADER_GUARD
+#if !defined(COOL_IMPL_PLATFORM_H_HEADER_GUARD)
+#define COOL_IMPL_PLATFORM_H_HEADER_GUARD
 
 #if !defined(WIN32_TARGET)
 #  if defined(_MSC_VER)

@@ -1,4 +1,4 @@
-/* Copyright (c) 2015 Digiverse d.o.o.
+/* Copyright (c) 2016 Digiverse d.o.o.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License. The
@@ -19,39 +19,52 @@
  * IN THE SOFTWARE.
  */
 
-#if !defined(DLL_DECL_H_HEADER_GUARD)
-#define DLL_DECL_H_HEADER_GUARD
+#include "impl/gcd/runner.h"
 
-#if !defined(WIN32_TARGET)
-#  if defined(_MSC_VER)
-#    define WIN32_TARGET
-#  endif
-#endif
+namespace cool { namespace async { namespace impl {
 
-#if !defined(APPLE_TARGET)
-#  if defined(__APPLE__)
-#    define APPLE_TARGET
-#  endif
-#endif
-
+runner::runner(RunnerType type_)
+    : named("si.digiverse.cool.runner")
+    , m_is_system(false)
+    , m_active(true)
+{
 #if !defined(LINUX_TARGET)
-#  if defined(__linux)
-#    define LINUX_TARGET
-#  endif
+  if (type_ == RunnerType::CONCURRENT)
+    m_queue = ::dispatch_queue_create(name().c_str(), DISPATCH_QUEUE_CONCURRENT);
+  else
 #endif
+  m_queue = ::dispatch_queue_create(name().c_str(), NULL);
+}
 
-#if defined(WIN32_TARGET) && !defined(COOL_STATIC)
-#  if defined(COOL_BUILD)
-#    define dlldecl __declspec( dllexport )
-#  else
-#    define dlldecl __declspec( dllimport )
-#  endif
-#else
-#  define dlldecl
-#endif
+runner::~runner()
+{
+  start();
+  if (!m_is_system)
+    dispatch_release(m_queue);
+}
 
-#if defined(WIN32_TARGET)
-#  define INCORRECT_VARIADIC
-#endif
+void runner::start()
+{
+  if (!m_is_system)
+  {
+    bool expect = false;
+    if (m_active.compare_exchange_strong(expect, true))
+    {
+      ::dispatch_resume(m_queue);
+    }
+  }
+}
 
-#endif
+void runner::stop()
+{
+  if (!m_is_system)
+  {
+    bool expect = true;
+    if (m_active.compare_exchange_strong(expect, false))
+    {
+      ::dispatch_suspend(m_queue);
+    }
+  }
+}
+
+} } } // namespace

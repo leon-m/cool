@@ -1,4 +1,4 @@
-/* Copyright (c) 2015 Digiverse d.o.o.
+/* Copyright (c) 2016 Digiverse d.o.o.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License. The
@@ -19,39 +19,32 @@
  * IN THE SOFTWARE.
  */
 
-#if !defined(DLL_DECL_H_HEADER_GUARD)
-#define DLL_DECL_H_HEADER_GUARD
+#if !defined(COOL_IMPL_GCD_RUNNER_H_HEADER_GUARD)
+#define COOL_IMPL_GCD_RUNNER_H_HEADER_GUARD
 
-#if !defined(WIN32_TARGET)
-#  if defined(_MSC_VER)
-#    define WIN32_TARGET
-#  endif
-#endif
+#include <atomic>
+#include <dispatch/dispatch.h>
+#include "cool2/async.h"
+#include "cool2/named.h"
 
-#if !defined(APPLE_TARGET)
-#  if defined(__APPLE__)
-#    define APPLE_TARGET
-#  endif
-#endif
+namespace cool { namespace async { namespace impl {
 
-#if !defined(LINUX_TARGET)
-#  if defined(__linux)
-#    define LINUX_TARGET
-#  endif
-#endif
+class runner : public misc::named
+{
+ public:
+  runner(RunnerType type_);
+  ~runner();
 
-#if defined(WIN32_TARGET) && !defined(COOL_STATIC)
-#  if defined(COOL_BUILD)
-#    define dlldecl __declspec( dllexport )
-#  else
-#    define dlldecl __declspec( dllimport )
-#  endif
-#else
-#  define dlldecl
-#endif
+  void start();
+  void stop();
 
-#if defined(WIN32_TARGET)
-#  define INCORRECT_VARIADIC
-#endif
+ private:
+  const bool        m_is_system;
+  std::atomic<bool> m_active;
+  dispatch_queue_t  m_queue;
+};
+
+} } } // namespace
 
 #endif
+
