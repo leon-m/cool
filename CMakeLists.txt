@@ -137,6 +137,7 @@ else()
 endif()
 
 if (WIN32)
+  add_definitions(-DDISPATCH_DEBUG=0)
   add_subdirectory(externals/xdispatch)
 endif()
 
