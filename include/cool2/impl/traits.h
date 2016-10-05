@@ -202,7 +202,7 @@ struct are_chained : public are_chained<Ts...>
 { };
 
 template <typename T, typename Y>
-struct are_chained<T, Y> : public result<std::is_same<typename T::result_t, typename Y::parameter_t>::value>
+struct are_chained<T, Y> : public result<std::is_same<typename std::decay<typename T::result_t>::type, typename std::decay<typename Y::parameter_t>::type>::value>
 { };
 
 } } } } // namespace

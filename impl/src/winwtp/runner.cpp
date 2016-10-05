@@ -18,53 +18,58 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
-
-#include "entrails/gcd/runner.h"
+#include "cool/exception.h"
+#include "entrails/winwtp/runner.h"
 
 namespace cool { namespace async { namespace entrails {
+
+class poolmgr
+{
+ public:
+  poolmgr() 
+    : m_pool(NULL)
+  {
+    InitializeThreadpoolEnvironment(&m_environ);
+    m_pool = CreateThreadpool(NULL);
+    if (m_pool == NULL)
+      throw cool::exception::operation_failed("failed to create thread pool");
+  }
+
+  ~poolmgr()
+  {
+    if (m_pool != NULL)
+      CloseThreadpool(m_pool);
+
+    DestroyThreadpoolEnvironment(&m_environ);
+  }
+
+  PTP_POOL            m_pool;
+  TP_CALLBACK_ENVIRON m_environ;
+};
+
+std::unique_ptr<poolmgr> runner::m_pool;
 
 runner::runner(RunPolicy policy_)
     : named("si.digiverse.cool2.runner")
     , m_is_system(false)
     , m_active(true)
 {
-#if !defined(LINUX_TARGET)
-  if (policy_ == RunPolicy::CONCURRENT)
-    m_queue = ::dispatch_queue_create(name().c_str(), DISPATCH_QUEUE_CONCURRENT);
-  else
-#endif
-    m_queue = ::dispatch_queue_create(name().c_str(), NULL);
+  if (m_refcnt++ == 0)
+    m_pool.reset(new poolmgr());
 }
 
 runner::~runner()
 {
-  start();
-  if (!m_is_system)
-    dispatch_release(m_queue);
+  if (--m_refcnt == 0)
+    m_pool.reset();
 }
 
 void runner::start()
 {
-  if (!m_is_system)
-  {
-    bool expect = false;
-    if (m_active.compare_exchange_strong(expect, true))
-    {
-      ::dispatch_resume(m_queue);
-    }
-  }
 }
 
 void runner::stop()
 {
-  if (!m_is_system)
-  {
-    bool expect = true;
-    if (m_active.compare_exchange_strong(expect, false))
-    {
-      ::dispatch_suspend(m_queue);
-    }
-  }
 }
 
 } } } // namespace

@@ -19,25 +19,21 @@
  * IN THE SOFTWARE.
  */
 
-#if !defined(COOL_IMPL_ASYNC_H_HEADER_GUARD)
-#define COOL_IMPL_ASYNC_H_HEADER_GUARD
+#if !defined(cool_a8ed9ec1_c086_4866_8e9c_4de137df0daf)
+#define cool_a8ed9ec1_c086_4866_8e9c_4de137df0daf
 
-#if !defined(COOL_USE_ASYNC_PLATFORM)
-#  if defined(WINDOWS_TARGET)
-#    define COOL_USE_ASYNC_PLATFORM worker
-#  else
-#    define COOL_USE_ASYNC_PLATFORM gcd
-#  endif
+#if !defined(COOL_ASYNC_PLATFORM)
+# error "COOL_ASYNC_PLATFORM must be defined and set to one of supported platforms"
 #endif
 
-#if COOL_USE_ASYNC_PLATFORM == gcd
 
-#include "gcd/runner.h"
-
+#if COOL_ASYNC_PLATFORM == gcd
+#  include "gcd/runner.h"
+#elif COOL_USE_ASYNC_PLATFORM == winwtp
+#  include "winwtp/runner.h"
 #else
-
 # error "unsupported async platform" COOL_USE_ASYNC_PLATFORM
-
 #endif
+
 
 #endif

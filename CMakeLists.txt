@@ -111,10 +111,20 @@ if (WINDOWS)
   add_subdirectory(externals/xdispatch)
 endif()
 
+# ------ COOL FEATURES
+
+if (NOT COOL_ASYNC_PLATFORM)
+  if (WINDOWS)
+    set (COOL_ASYNC_PLATFORM winwtp)
+  else()
+    set (COOL_ASYNC_PLATFORM gcd)
+  endif()
+endif()
+
 set (COOL_SRCS
      ${COOL_HOME}/impl/src/async.cpp
      ${COOL_HOME}/impl/src/named.cpp
-     ${COOL_HOME}/impl/src/gcd/runner.cpp
+     ${COOL_HOME}/impl/src/${COOL_ASYNC_PLATFORM}/runner.cpp
 # -- old stuff
      ${COOL_HOME}/lib/miscellaneous.cpp
      ${COOL_HOME}/lib/vow.cpp
@@ -128,8 +138,8 @@ endif()
 set (COOL_HEADERS
     ${COOL_HOME}/include/cool2/named.h
     ${COOL_HOME}/include/cool2/async.h
-    ${COOL_HOME}/include/cool2/impl/platform.h
-    ${COOL_HOME}/include/cool2/impl/traits.h
+    ${COOL_HOME}/include/cool2/async/runner.h
+    ${COOL_HOME}/include/cool2/async/task.h
 #-- old stuff
     ${COOL_HOME}/include/cool/cool.h
     ${COOL_HOME}/include/cool/exception.h
@@ -145,8 +155,11 @@ if (OSX OR LINUX)
 endif()
 
 set (COOL_IMPL_HEADERS
-    ${COOL_HOME}/impl/include/impl/async.h
-    ${COOL_HOME}/impl/include/impl/gcd/runner.h
+    ${COOL_HOME}/include/cool2/impl/platform.h
+    ${COOL_HOME}/include/cool2/impl/traits.h
+    ${COOL_HOME}/include/cool2/async/impl/task.h
+    ${COOL_HOME}/impl/include/entrails/async.h
+    ${COOL_HOME}/impl/include/entrails/${COOL_ASYNC_PLATFORM}/runner.h
     #-- old stuff
     ${COOL_HOME}/include/cool/entrails/vow.h
     ${COOL_HOME}/include/cool/entrails/gcd_task.h
@@ -154,6 +167,7 @@ set (COOL_IMPL_HEADERS
     ${COOL_HOME}/include/cool/entrails/platform.h
     ${COOL_HOME}/include/cool/entrails/traits.h
 )
+
 if (OSX OR LINUX)
   set (COOL_IMPL_HEADERS ${COOL_IMPL_HEADERS} ${COOL_HOME}/include/cool/entrails/ip_address.h)
 endif()
@@ -165,7 +179,7 @@ source_group("Impl Source Files" FILES ${COOL_SRCS})
 # -- dynamic library
 add_library (${COOL_DYNAMIC_LIBRARY_NAME} SHARED ${COOL_SRCS} ${COOL_HEADERS} ${COOL_IMPL_HEADERS})
 set_target_properties (${COOL_DYNAMIC_LIBRARY_NAME} PROPERTIES
-    COMPILE_DEFINITIONS "${TARGET};COOL_BUILD"
+    COMPILE_DEFINITIONS "${TARGET};COOL_BUILD;COOL_ASYNC_PLATFORM=${COOL_ASYNC_PLATFORM}"
     OUTPUT_NAME ${COOL_NAME}
     VERSION ${COOL_VERSION}
     SOVERSION ${COOL_SOVERSION}
@@ -185,7 +199,7 @@ target_include_directories (${COOL_DYNAMIC_LIBRARY_NAME} PRIVATE ${COOL_HOME}/im
 # -- static library
 add_library(${COOL_STATIC_LIBRARY_NAME} STATIC ${COOL_SRCS} ${COOL_HEADERS} ${COOL_IMPL_HEADERS})
 set_target_properties(${COOL_STATIC_LIBRARY_NAME} PROPERTIES
-  COMPILE_DEFINITIONS "COOL_STATIC;${TARGET};COOL_BUILD"
+  COMPILE_DEFINITIONS "COOL_STATIC;${TARGET};COOL_BUILD;COOL_ASYNC_PLATFORM=${COOL_ASYNC_PLATFORM}"
   OUTPUT_NAME ${COOL_NAME}
   ARCHIVE_OUTPUT_DIRECTORY ${COOL_LIBRARY_DIR}
   FOLDER Cool2

@@ -22,13 +22,13 @@
 #include <memory>
 
 #include "cool2/async.h"
-#include "impl/async.h"
+#include "entrails/async.h"
 
 namespace cool { namespace async {
 
-runner::runner(RunnerType type_)
+runner::runner(RunPolicy policy_)
 {
-  m_impl = std::make_shared<impl::runner>(type_);
+  m_impl = std::make_shared<entrails::runner>(policy_);
 }
 
 runner::~runner()
@@ -39,5 +39,24 @@ const std::string& runner::name() const
   return m_impl->name();
 }
 
+const entrails::runner& runner::impl() const
+{
+  return *m_impl;
+}
+
+entrails::runner& runner::impl()
+{
+  return *m_impl;
+}
+
+void runner::start()
+{
+  m_impl->start();
+}
+
+void runner::stop()
+{
+  m_impl->stop();
+}
 
 } } //namespace

@@ -24,13 +24,15 @@
 #include <atomic>
 #include <typeinfo>
 #include <gtest/gtest.h>
+#include <cool/vow.h>
 #include "cool2/async.h"
 
 using namespace cool::async;
+using ms = std::chrono::milliseconds;
 
 TEST(runner, basic)
 {
-  const std::string base = "si.digiverse.cool.runner";
+  const std::string base = "si.digiverse.cool2.runner";
   runner r;
   EXPECT_EQ(base, r.name().substr(0,base.length()));
 
@@ -64,7 +66,7 @@ struct my_runner : public runner
 #define IS_PAR_TYPE(type_, task_) \
    EXPECT_EQ(std::string(typeid(type_).name()), \
              std::string(typeid(decltype(task_)::parameter_t).name()))
-
+#if 0
 // This tests si basically compilation test to see whether the stuff compiles
 // with different Callable types
 TEST(runner, basic_compile_task)
@@ -196,10 +198,28 @@ TEST(runner, basic_compile_parallel)
     EXPECT_EQ(typeid(std::tuple<double, double>), typeid(decltype(c)::result_t));
   }
   {
+    auto t = taskop::create(r, &d_f);
+    auto y = taskop::create(r, &d_f);
+
+    auto c = t.parallel(y);
+
+    IS_PAR_TYPE(void, c);
+    EXPECT_EQ(typeid(std::tuple<double, double>), typeid(decltype(c)::result_t));
+  }
+  {
     auto t = taskop::create(r, &d_f_d);
     auto y = taskop::create(r, &v_f_d);
 
     auto c = taskop::parallel(t, y);
+
+    IS_PAR_TYPE(double, c);
+    EXPECT_EQ(typeid(std::tuple<double, void*>), typeid(decltype(c)::result_t));
+  }
+  {
+    auto t = taskop::create(r, &d_f_d);
+    auto y = taskop::create(r, &v_f_d);
+
+    auto c = t.parallel(y);
 
     IS_PAR_TYPE(double, c);
     EXPECT_EQ(typeid(std::tuple<double, void*>), typeid(decltype(c)::result_t));
@@ -219,6 +239,14 @@ TEST(runner, basic_compile_sequential)
     IS_RET_TYPE(double, c);
   }
   {
+    auto t = taskop::create(r, &v_f);
+    auto y = taskop::create(r, &d_f);
+
+    auto c = t.sequential(y);
+    IS_PAR_TYPE(void, c);
+    IS_RET_TYPE(double, c);
+  }
+  {
     auto t = taskop::create(r, &d_f_d);
     auto y = taskop::create(r, &v_f_d);
 
@@ -226,7 +254,92 @@ TEST(runner, basic_compile_sequential)
     IS_PAR_TYPE(double, c);
     IS_RET_TYPE(void, c);
   }
+  {
+    auto t = taskop::create(r, &d_f_d);
+    auto y = taskop::create(r, &v_f_d);
+
+    auto c = t.sequential(y);
+    IS_PAR_TYPE(double, c);
+    IS_RET_TYPE(void, c);
+  }
 }
 
+TEST(runner, parallel_return_value)
+{
+  auto r = std::make_shared<my_runner>();
 
+  try
+  {
+    cool::basis::vow<void> v_;
+    auto a_ = v_.get_aim();
+
+    auto a = taskop::create(r , [](const runner::weak_ptr_t& r) -> double { return 42.0; });
+    auto b = taskop::create(r , [](const runner::weak_ptr_t& r) -> int { return 21; });
+    auto c = a.parallel(b);
+    auto d = taskop::create(
+        r
+      , [&v_] (const runner::weak_ptr_t& r, const decltype(c)::result_t& res)
+        {
+          EXPECT_EQ(42.0, std::get<0>(res));
+          EXPECT_EQ(21, std::get<1>(res));
+          v_.set();
+        }
+    );
+    c.sequential(d).run();
+    a_.get(ms(100));
+  }
+  catch (...)
+  {
+    EXPECT_TRUE(false);
+  }
+}
+#endif
+
+TEST(runner, basic_task_non_void_non_void)
+{
+  auto r = std::make_shared<my_runner>();
+
+  // std::string ret, int parameter
+  {
+    cool::basis::vow<void> v_;
+    auto a_ = v_.get_aim();
+
+    auto t = taskop::create(r, [&v_] (const runner::ptr_t& r_, int n_) { v_.set(); return std::to_string(n_); });
+    t.run();
+
+    EXPECT_NO_THROW(a_.get(ms(100)));
+  }
+  
+  // int ret void parameter
+  {
+    cool::basis::vow<void> v_;
+    auto a_ = v_.get_aim();
+
+    auto t = taskop::create(r, [&v_] (const runner::ptr_t& r_) -> int { v_.set(); return 5; });
+    t.run();
+
+    EXPECT_NO_THROW(a_.get(ms(100)));
+  }
+
+  // void ret int parameter
+  {
+    cool::basis::vow<void> v_;
+    auto a_ = v_.get_aim();
+
+    auto t = taskop::create(r, [&v_] (const runner::ptr_t& r_, int n_) -> void { v_.set(); });
+    t.run();
+
+    EXPECT_NO_THROW(a_.get(ms(100)));
+  }
+  // void ret void paramter
+  {
+    cool::basis::vow<void> v_;
+    auto a_ = v_.get_aim();
+
+    auto t = taskop::create(r, [&v_] (const runner::ptr_t& r_) -> void { v_.set(); });
+    t.run();
+
+    EXPECT_NO_THROW(a_.get(ms(100)));
+  }
+}
 

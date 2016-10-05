@@ -19,20 +19,20 @@
  * IN THE SOFTWARE.
  */
 
-#if !defined(COOL_IMPL_GCD_RUNNER_H_HEADER_GUARD)
-#define COOL_IMPL_GCD_RUNNER_H_HEADER_GUARD
+#if !defined(cool_d2aa9442_15ec_4748_9d69_a7d096d1b861)
+#define cool_d2aa9442_15ec_4748_9d69_a7d096d1b861
 
 #include <atomic>
 #include <dispatch/dispatch.h>
 #include "cool2/async.h"
 #include "cool2/named.h"
 
-namespace cool { namespace async { namespace impl {
+namespace cool { namespace async { namespace entrails {
 
 class runner : public misc::named
 {
  public:
-  runner(RunnerType type_);
+  runner(RunPolicy policy_);
   ~runner();
 
   void start();

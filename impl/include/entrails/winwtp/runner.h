@@ -19,52 +19,40 @@
  * IN THE SOFTWARE.
  */
 
-#include "entrails/gcd/runner.h"
+#if !defined(cool_fd91c274_b68e_4581_9721_80e1f050036e)
+#define cool_fd91c274_b68e_4581_9721_80e1f050036e
+
+#define WIN32_MEAN_AND_LEAN
+#include <windows.h>
+
+#include <atomic>
+#include <memory>
+#include "cool2/async.h"
+#include "cool2/named.h"
 
 namespace cool { namespace async { namespace entrails {
 
-runner::runner(RunPolicy policy_)
-    : named("si.digiverse.cool2.runner")
-    , m_is_system(false)
-    , m_active(true)
-{
-#if !defined(LINUX_TARGET)
-  if (policy_ == RunPolicy::CONCURRENT)
-    m_queue = ::dispatch_queue_create(name().c_str(), DISPATCH_QUEUE_CONCURRENT);
-  else
-#endif
-    m_queue = ::dispatch_queue_create(name().c_str(), NULL);
-}
+class poolmgr;
 
-runner::~runner()
+class runner : public misc::named
 {
-  start();
-  if (!m_is_system)
-    dispatch_release(m_queue);
-}
+ public:
+  runner(RunPolicy policy_);
+  ~runner();
 
-void runner::start()
-{
-  if (!m_is_system)
-  {
-    bool expect = false;
-    if (m_active.compare_exchange_strong(expect, true))
-    {
-      ::dispatch_resume(m_queue);
-    }
-  }
-}
+  void start();
+  void stop();
 
-void runner::stop()
-{
-  if (!m_is_system)
-  {
-    bool expect = true;
-    if (m_active.compare_exchange_strong(expect, false))
-    {
-      ::dispatch_suspend(m_queue);
-    }
-  }
-}
+ private:
+  std::atomic<unsigned int> m_refcnt;
+
+  const bool        m_is_system;
+  std::atomic<bool> m_active;
+
+  static std::unique_ptr<poolmgr> m_pool;
+};
 
 } } } // namespace
+
+#endif
+
