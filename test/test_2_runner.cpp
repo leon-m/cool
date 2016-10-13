@@ -229,17 +229,39 @@ TEST(runner, sequential_tasks)
     ).run();
 
     // the second task will make sure that the first completed the 200ms
-    // wait (step value 2) and moe the step to 3 if it did
+    // wait (step value 2) and move the step to 3 if it did .. .and repeat
+    // this several times to add more tasks into the queue
     taskop::create(r,
       [&v_, &step] (const runner::ptr& r_)
       {
         if (step == 2)
           step = 3;
+      }
+    ).run();
+    taskop::create(r,
+      [&v_, &step] (const runner::ptr& r_)
+      {
+        if (step == 3)
+          step = 4;
+      }
+    ).run();
+    taskop::create(r,
+      [&v_, &step] (const runner::ptr& r_)
+      {
+        if (step == 4)
+          step = 5;
+      }
+    ).run();
+    taskop::create(r,
+      [&v_, &step] (const runner::ptr& r_)
+      {
+        if (step == 5)
+          step = 6;
         v_.set();
       }
     ).run();
     EXPECT_NO_THROW(a_.get(ms(300)));
-    EXPECT_EQ(3, step);
+    EXPECT_EQ(6, step);
   }
 }
 
