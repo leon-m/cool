@@ -19,8 +19,8 @@
  * IN THE SOFTWARE.
  */
 
-#if !defined(COOL_IMPL_TRAITS_H_HEADER_GUARD)
-#define COOL_IMPL_TRAITS_H_HEADER_GUARD
+#if !defined(cool_41152bf7_f2d7_4732_8200_be1475dc84b2)
+#define cool_41152bf7_f2d7_4732_8200_be1475dc84b2
 
 namespace cool { namespace async { namespace impl { namespace traits {
 
@@ -172,7 +172,7 @@ class first_task
 };
 
 // --------
-// test_all_same::value is true if all types in paramter pack are the same
+// all_same::value is true if all types in paramter pack are the same
 // type (after std::decay) and false if not
 
 template<typename... T>
@@ -192,18 +192,22 @@ template<typename T, typename... Ts>
 struct all_same<T, T, Ts...> : all_same<T, Ts...>
 { };
 
-template <bool V> struct result : public std::true_type
-{ };
-template <> struct result<false> : public std::false_type
-{};
+// --------
+// all_chained::value is true if for all task types in the parameter pack
+// the parameter type of the next task is the same as the result type of the
+// preceding task
 
-template <typename T, typename... Ts>
-struct are_chained : public are_chained<Ts...>
-{ };
+template <typename T, typename Y, typename... Ts>
+struct all_chained
+{
+  using result = std::integral_constant<bool, all_chained<T, Y>::result::value && all_chained<Y, Ts...>::result::value>;
+};
 
 template <typename T, typename Y>
-struct are_chained<T, Y> : public result<std::is_same<typename std::decay<typename T::result_t>::type, typename std::decay<typename Y::parameter_t>::type>::value>
-{ };
+struct all_chained<T, Y>
+{
+  using result = std::integral_constant<bool, std::is_same<typename std::decay<typename T::result_t>::type, typename std::decay<typename Y::parameter_t>::type>::value>;
+};
 
 } } } } // namespace
 

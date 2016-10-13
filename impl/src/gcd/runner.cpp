@@ -19,9 +19,16 @@
  * IN THE SOFTWARE.
  */
 
+#include "cool2/async.h"
+#include "cool/exception.h"
 #include "entrails/gcd/runner.h"
 
 namespace cool { namespace async { namespace entrails {
+
+struct exec_info
+{
+  impl::context_ptr m_context;
+};
 
 runner::runner(RunPolicy policy_)
     : named("si.digiverse.cool2.runner")
@@ -66,5 +73,37 @@ void runner::stop()
     }
   }
 }
+
+// ----
+// NOTE: run() allocates new exec_info token which address is sent via task queue
+// as a user data to task_executor. Task executor is a static method, available
+// event if the runner instance disappears. Hence it will delete the exec_info
+// in any case, thus preventing memory leaks.
+
+void runner::run(const impl::context_ptr& ctx_)
+{
+  auto aux = new exec_info;
+  aux->m_context = ctx_;
+
+  ::dispatch_async_f(m_queue, aux, task_executor);
+}
+
+// executor for task::run()
+void runner::task_executor(void* ctx_)
+{
+  auto aux = static_cast<exec_info*>(ctx_);
+  auto ctx = aux->m_context;
+  delete aux;
+
+  auto r = ctx->m_runner.lock();
+  if (r)
+    r->impl()->task_executor(r, ctx);
+}
+  
+void runner::task_executor(const async::runner::ptr& r_, const impl::context_ptr& ctx_)
+{
+  ctx_->m_ctx.simple()->entry_point()(r_, ctx_);
+}
+
 
 } } } // namespace

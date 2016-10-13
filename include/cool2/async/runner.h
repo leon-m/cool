@@ -83,8 +83,8 @@ enum class RunPolicy { SEQUENTIAL, CONCURRENT };
 class runner
 {
  public:
-  using ptr_t = std::shared_ptr<runner>;
-  using weak_ptr_t = std::weak_ptr<runner>;
+  using ptr = std::shared_ptr<runner>;
+  using weak_ptr = std::weak_ptr<runner>;
 
  public:
   /**
@@ -162,44 +162,44 @@ class runner
    * Returns a reference to the internal task queue implementation. Portable
    * applications should avoid using the internal implementation directly.
    */
-   const entrails::runner& impl() const;
+   const std::shared_ptr<entrails::runner> impl() const;
   /**
    * Return task queue implementation
    *
    * Returns a reference to the internal task queue implementation. Portable
    * applications should avoid using the internal implementation directly.
    */
-  entrails::runner& impl();
+  std::shared_ptr<entrails::runner> impl();
   /**
    * Returns system-wide runner object with the high priority.
    *
    * @note This runner may execute tasks concurrently.
    */
-  dlldecl static ptr_t sys_high();
+  dlldecl static ptr sys_high();
   /**
    * Returns system-wide runner object with the default priority.
    *
    * @note This runner may execute tasks concurrently.
    */
-  dlldecl static ptr_t sys_default();
+  dlldecl static ptr sys_default();
   /**
    * Returns system-wide runner object with the low priority.
    *
    * @note This runner may execute tasks concurrently.
    */
-  dlldecl static ptr_t sys_low();
+  dlldecl static ptr sys_low();
   /**
    * Returns system-wide runner object with the background (lowest) priority.
    *
    * @note This runner may execute tasks concurrently.
    */
-  dlldecl static ptr_t sys_background();
+  dlldecl static ptr sys_background();
   /**
    * Returns library default runner.
    *
    * @note This runner executes tasks sequentially.
    */
-  dlldecl static ptr_t cool_default();
+  dlldecl static ptr cool_default();
   
  private:
   std::shared_ptr<entrails::runner> m_impl;

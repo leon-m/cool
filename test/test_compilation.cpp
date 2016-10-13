@@ -28,6 +28,8 @@
 
 #include "cool2/impl/traits.h"
 
+#define RESULT(a, b) (a == b ? "OK\n" : "Failed\n")
+
 
 using namespace cool::async::impl;
 using namespace std::placeholders;
@@ -131,26 +133,6 @@ int main(int argc, char* argv[])
         "    param 1    : " << typeid(traits::function_traits<decltype(b)>:: template arg<0>::type).name() << "\n\n";
   }
 
-#if 0
-  // function_traits do not work for std::bind produced types as they have multiple
-  // operator() overloads. There is no way aroudn this limitation.
-  {
-    auto a = std::bind(f3, _1, _2, 4);
-    auto b = std::bind(f4, _1, 42);
-
-    std::cout << typeid(decltype(b)).name() << "\n";
-    std::cout <<
-        "  std::bind(f3, _1, _2, 4)\n"
-        "    return type: " << typeid(traits::function_traits<decltype(a)>::result_type).name() << "\n"
-        "    num params : " << traits::function_traits<decltype(a)>::arity::value << "\n"
-        "    param 1    : " << typeid(traits::function_traits<decltype(a)>:: template arg<0>::type).name() << "\n"
-        "    param 2    : " << typeid(traits::function_traits<decltype(a)>:: template arg<1>::type).name() << "\n\n"
-        "  std::bind(f4, _1, 42)\n"
-        "    return type: " << typeid(traits::function_traits<decltype(b)>::result_type).name() << "\n"
-        "    num params : " << traits::function_traits<decltype(b)>::arity::value << "\n"
-        "    param 1    : " << typeid(traits::function_traits<decltype(b)>:: template arg<0>::type).name() << "\n\n";
-  }
-#endif
   std::cout << "Result type deduction\n"
                "=====================\n\n";
   {
@@ -204,6 +186,46 @@ int main(int argc, char* argv[])
         "  all_same<int&, int>\n"
         "    result: " << (traits::all_same<std::decay<int&>::type,int>::value ? "true" : "false" ) << "\n\n";
   }
+  {
+    std::cout <<
+    "  all_same<double, double, double, double, double, double, double>\n"
+    "    result: " << (traits::all_same<double, double, double, double, double, double, double>::value ? "true" : "false" ) << "\n\n";
+  }
+  {
+    std::cout <<
+    "  all_same<double, double, double, double, double, double, int>\n"
+    "    result: " << (traits::all_same<double, double, double, double, double, double, int>::value ? "true" : "false" ) << "\n\n";
+  }
+  {
+    std::cout <<
+    "  all_same<double, double, double, double, double, int, double>\n"
+    "    result: " << (traits::all_same<double, double, double, double, double, int, double>::value ? "true" : "false" ) << "\n\n";
+  }
+  {
+    std::cout <<
+    "  all_same<double, double, double, double, int, double, double>\n"
+    "    result: " << (traits::all_same<double, double, double, double, int, double, double>::value ? "true" : "false" ) << "\n\n";
+  }
+  {
+    std::cout <<
+    "  all_same<double, double, double, int, double, double, double>\n"
+    "    result: " << (traits::all_same<double, double, double, int, double, double, double>::value ? "true" : "false" ) << "\n\n";
+  }
+  {
+    std::cout <<
+    "  all_same<double, double, int, double, double, double, double>\n"
+    "    result: " << (traits::all_same<double, double, int, double, double, double, double>::value ? "true" : "false" ) << "\n\n";
+  }
+  {
+    std::cout <<
+    "  all_same<double, int, double, double, double, double, double>\n"
+    "    result: " << (traits::all_same<double, int, double, double, double, double, double>::value ? "true" : "false" ) << "\n\n";
+  }
+  {
+    std::cout <<
+    "  all_same<int, double, double, double, double, double, double>\n"
+    "    result: " << (traits::all_same<int, double, double, double, double, double, double>::value ? "true" : "false" ) << "\n\n";
+  }
   std::cout << "Result of are_chained\n"
                "=====================\n\n";
   {
@@ -218,7 +240,17 @@ int main(int argc, char* argv[])
   }
   {
     std::cout <<
-    "  are_chained<C<int, double>, C<void, int>, C<char, void>>\n"
+    "  are_chained<C<int,double>, C<void,int>, C<char, void>, C<bool, char>, C<double, bool>, C<void, double>>:\n"
+    "    result: " << RESULT(true, (traits::are_chained<C<int,double>, C<void,int>, C<char, void>, C<bool, char>, C<double, bool>, C<void, double>>::value)) << "\n\n";
+  }
+  {
+    std::cout <<
+    "  are_chained<C<int,double>, C<void,int>, C<char, void>, C<bool, bool>, C<double, bool>, C<void, double>>:\n"
+    "    result: " << RESULT(false, (traits::are_chained<C<int,double>, C<void,int>, C<char, void>, C<bool, bool>, C<double, bool>, C<void, double>>::value)) << "\n\n";
+  }
+  {
+    std::cout <<
+    "  are_chained<C<int, double>, C<void, int>, C<char, void> C<void, char>\n"
     "    result: " << (traits::are_chained<C<int,double>, C<void,int>, C<char, void>>::value ? "true" : "false" ) << "\n\n";
   }
   {

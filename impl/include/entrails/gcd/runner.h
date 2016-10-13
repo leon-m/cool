@@ -23,20 +23,31 @@
 #define cool_d2aa9442_15ec_4748_9d69_a7d096d1b861
 
 #include <atomic>
+#include <memory>
 #include <dispatch/dispatch.h>
 #include "cool2/async.h"
 #include "cool2/named.h"
+#include "entrails/runner.h"
 
 namespace cool { namespace async { namespace entrails {
 
 class runner : public misc::named
 {
  public:
+  using ptr_t = std::shared_ptr<runner>;
+  using weak_ptr_t = std::weak_ptr<runner>;
+
+ public:
   runner(RunPolicy policy_);
   ~runner();
 
   void start();
   void stop();
+  void run(const impl::context_ptr&);
+
+ private:
+  static void task_executor(void*);
+  void task_executor(const async::runner::ptr&, const impl::context_ptr&);
 
  private:
   const bool        m_is_system;

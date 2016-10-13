@@ -76,7 +76,7 @@ if (OSX)
 elseif (LINUX)
   set (COOL_LINK_LIBRARIES dispatch pthread)
 else()
-  set (COOL_LINK_LIBRARIES dispatch)
+  set (COOL_LINK_LIBRARIES)
 endif()
 
 set (COOL_STATIC_LIBRARY_NAME ${COOL_LIBRARY_NAME}${STATIC_LIB_SFX})
@@ -104,11 +104,7 @@ if (WINDOWS)
   set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
   set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /EHsc /MTd")
 else()
-  set (CMAKE_CXX_FLAGS "-std=c++11 -g ${DISABLED_WARNINGS}")
-endif()
-
-if (WINDOWS)
-  add_subdirectory(externals/xdispatch)
+  set (CMAKE_CXX_FLAGS "-std=c++11 -g ${DISABLED_WARNINGS} -fpermissive")
 endif()
 
 # ------ COOL FEATURES
@@ -116,8 +112,10 @@ endif()
 if (NOT COOL_ASYNC_PLATFORM)
   if (WINDOWS)
     set (COOL_ASYNC_PLATFORM winwtp)
+    set (COOL_ASYNC_PLATFORM_DEFINE COOL_ASYNC_PLATFORM_WINWTP)
   else()
     set (COOL_ASYNC_PLATFORM gcd)
+    set (COOL_ASYNC_PLATFORM_DEFINE COOL_ASYNC_PLATFORM_GCD)
   endif()
 endif()
 
@@ -128,8 +126,6 @@ set (COOL_SRCS
 # -- old stuff
      ${COOL_HOME}/lib/miscellaneous.cpp
      ${COOL_HOME}/lib/vow.cpp
-     ${COOL_HOME}/lib/gcd_task.cpp
-     ${COOL_HOME}/lib/gcd_async.cpp
 )
 if (OSX OR LINUX)
   set (COOL_SRCS ${COOL_SRCS} ${COOL_HOME}/lib/ip_address.cpp)
@@ -145,8 +141,6 @@ set (COOL_HEADERS
     ${COOL_HOME}/include/cool/exception.h
     ${COOL_HOME}/include/cool/miscellaneous.h
     ${COOL_HOME}/include/cool/vow.h
-    ${COOL_HOME}/include/cool/gcd_task.h
-    ${COOL_HOME}/include/cool/gcd_async.h
     ${COOL_HOME}/include/cool/binary.h
 )
 
@@ -158,12 +152,10 @@ set (COOL_IMPL_HEADERS
     ${COOL_HOME}/include/cool2/impl/platform.h
     ${COOL_HOME}/include/cool2/impl/traits.h
     ${COOL_HOME}/include/cool2/async/impl/task.h
-    ${COOL_HOME}/impl/include/entrails/async.h
+    ${COOL_HOME}/impl/include/entrails/runner.h
     ${COOL_HOME}/impl/include/entrails/${COOL_ASYNC_PLATFORM}/runner.h
     #-- old stuff
     ${COOL_HOME}/include/cool/entrails/vow.h
-    ${COOL_HOME}/include/cool/entrails/gcd_task.h
-    ${COOL_HOME}/include/cool/entrails/gcd_async.h
     ${COOL_HOME}/include/cool/entrails/platform.h
     ${COOL_HOME}/include/cool/entrails/traits.h
 )
@@ -179,7 +171,7 @@ source_group("Impl Source Files" FILES ${COOL_SRCS})
 # -- dynamic library
 add_library (${COOL_DYNAMIC_LIBRARY_NAME} SHARED ${COOL_SRCS} ${COOL_HEADERS} ${COOL_IMPL_HEADERS})
 set_target_properties (${COOL_DYNAMIC_LIBRARY_NAME} PROPERTIES
-    COMPILE_DEFINITIONS "${TARGET};COOL_BUILD;COOL_ASYNC_PLATFORM=${COOL_ASYNC_PLATFORM}"
+    COMPILE_DEFINITIONS "${TARGET};COOL_BUILD;${COOL_ASYNC_PLATFORM_DEFINE}"
     OUTPUT_NAME ${COOL_NAME}
     VERSION ${COOL_VERSION}
     SOVERSION ${COOL_SOVERSION}
@@ -199,7 +191,7 @@ target_include_directories (${COOL_DYNAMIC_LIBRARY_NAME} PRIVATE ${COOL_HOME}/im
 # -- static library
 add_library(${COOL_STATIC_LIBRARY_NAME} STATIC ${COOL_SRCS} ${COOL_HEADERS} ${COOL_IMPL_HEADERS})
 set_target_properties(${COOL_STATIC_LIBRARY_NAME} PROPERTIES
-  COMPILE_DEFINITIONS "COOL_STATIC;${TARGET};COOL_BUILD;COOL_ASYNC_PLATFORM=${COOL_ASYNC_PLATFORM}"
+  COMPILE_DEFINITIONS "COOL_STATIC;${TARGET};COOL_BUILD;${COOL_ASYNC_PLATFORM_DEFINE}"
   OUTPUT_NAME ${COOL_NAME}
   ARCHIVE_OUTPUT_DIRECTORY ${COOL_LIBRARY_DIR}
   FOLDER Cool2
@@ -209,15 +201,13 @@ target_include_directories (${COOL_STATIC_LIBRARY_NAME} PRIVATE ${COOL_HOME}/imp
 # --- Tests
 set (TESTS
    2_runner
-   runner
-   on_exception
 )
 
-if( NOT WINDOWS )
-  set (TESTS ${TESTS}
-    reader_writer
-  )
-endif()
+#if( NOT WINDOWS )
+#  set (TESTS ${TESTS}
+#    reader_writer
+#  )
+#endif()
 
 # --- Doxygen documentation
 
@@ -270,10 +260,4 @@ if (COOL_BUILD_TEST)
 
   endforeach()
 
-  # this is very specific tests that only needs to compile
-  add_executable (test_compilation ${COOL_HOME}/test/test_compilation.cpp)
-  set_target_properties (test_compilation PROPERTIES
-      RUNTIME_OUTPUT_DIRECTORY ${COOL_TEST_DIR}
-      FOLDER Tests
-  )
 endif()

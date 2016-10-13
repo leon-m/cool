@@ -22,18 +22,18 @@
 #if !defined(cool_a8ed9ec1_c086_4866_8e9c_4de137df0daf)
 #define cool_a8ed9ec1_c086_4866_8e9c_4de137df0daf
 
-#if !defined(COOL_ASYNC_PLATFORM)
-# error "COOL_ASYNC_PLATFORM must be defined and set to one of supported platforms"
-#endif
+#if defined(COOL_ASYNC_PLATFORM_GCD)
 
-
-#if COOL_ASYNC_PLATFORM == gcd
 #  include "gcd/runner.h"
-#elif COOL_USE_ASYNC_PLATFORM == winwtp
-#  include "winwtp/runner.h"
-#else
-# error "unsupported async platform" COOL_USE_ASYNC_PLATFORM
-#endif
 
+#elif defined(COOL_ASYNC_PLATFORM_WINWTP)
+
+#  include "winwtp/runner.h"
+
+#else
+
+#  pragma error "Asynchronous platform is not defined, cannot compile"
+
+#endif
 
 #endif

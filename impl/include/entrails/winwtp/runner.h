@@ -19,14 +19,17 @@
  * IN THE SOFTWARE.
  */
 
-#if !defined(cool_fd91c274_b68e_4581_9721_80e1f050036e)
-#define cool_fd91c274_b68e_4581_9721_80e1f050036e
+#if !defined(cool_1c6a4535_705a_4686_a315_30e4583a7a5b)
+#define cool_1c6a4535_705a_4686_a315_30e4583a7a5b
 
 #define WIN32_MEAN_AND_LEAN
 #include <windows.h>
 
 #include <atomic>
+#include <mutex>
 #include <memory>
+#include <deque>
+
 #include "cool2/async.h"
 #include "cool2/named.h"
 
@@ -36,20 +39,34 @@ class poolmgr;
 
 class runner : public misc::named
 {
+  using queue_t = std::deque<impl::context_ptr>;
+
  public:
   runner(RunPolicy policy_);
   ~runner();
 
   void start();
   void stop();
+  void run(const impl::context_ptr&);
 
  private:
-  std::atomic<unsigned int> m_refcnt;
+  static VOID CALLBACK task_executor(PTP_CALLBACK_INSTANCE instance_, PVOID pv_, PTP_WORK work_);
+  void task_executor();
+  void start_work();
+
+ private:
+  PTP_WORK             m_work;
+  queue_t              m_fifo;
+  std::atomic<boolean> m_busy;
+  std::mutex           m_;
+
+  static std::atomic<unsigned int> m_refcnt;
+  static std::unique_ptr<poolmgr>  m_pool;
+
 
   const bool        m_is_system;
   std::atomic<bool> m_active;
 
-  static std::unique_ptr<poolmgr> m_pool;
 };
 
 } } } // namespace

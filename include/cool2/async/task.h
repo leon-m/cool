@@ -28,9 +28,16 @@
 
 #include "cool2/impl/platform.h"
 #include "cool2/impl/traits.h"
+#include "cool/exception.h"
 #include "impl/task.h"
 
 namespace cool { namespace async {
+
+namespace entrails { void kick(const impl::context_ptr&); }
+
+using impl::runner_not_available;
+
+class taskop;
 
 /**
  * A class template representing the basic objects that can be scheduled for execution
@@ -157,20 +164,16 @@ namespace cool { namespace async {
  *     exception on to the next task in the sequence, if any.
  *
  */
-template <typename ResultT, typename ParamT>
+template <typename TagT, typename ResultT, typename ParamT>
 class task
 {
  public:
   using this_t       = task;
   using result_t     = ResultT;
   using parameter_t  = ParamT;
+  using tag          = TagT;
 
  public:
-
-  template <typename FunctionT>
-  task(const runner::weak_ptr_t& r_, FunctionT&& f_)
-    : m_impl(nullptr)
-  { }
 
   /**
    * Create a compound task which will concurrently execute its subtasks.
@@ -194,7 +197,8 @@ class task
    * @see taskop::sequential
    */
   template <typename... TaskT>
-  task<typename impl::traits::parallel_result<this_t, TaskT...>::type
+  task<impl::tag::parallel
+     , typename impl::traits::parallel_result<this_t, TaskT...>::type
      , parameter_t>
   parallel(TaskT&&... tasks);
 
@@ -220,7 +224,8 @@ class task
    * @see taskop::sequential
    */
   template <typename... TaskT>
-  task<typename impl::traits::sequence_result<this_t, TaskT...>::type
+  task<impl::tag::serial
+     , typename impl::traits::sequence_result<this_t, TaskT...>::type
      , parameter_t>
   sequential(TaskT&&... tasks);
 
@@ -246,7 +251,8 @@ class task
    * @see taskop::intercept_all
    */
   template <typename... HandlerTaskT>
-  task intercept(HandlerTaskT&&... handlers);
+  task <impl::tag::serial, ResultT, ParamT>
+  intercept(HandlerTaskT&&... handlers);
 
   /**
    * Add an exception handler for any exception to the task.
@@ -270,7 +276,8 @@ class task
    * @see taskop::intercept_all
    */
   template <typename HandlerTaskT>
-  task intercept_all(HandlerTaskT&& handler);
+  task <impl::tag::serial, ResultT, ParamT>
+  intercept_all(HandlerTaskT&& handler);
 
   /**
    * Schedule a task for execution by its runner.
@@ -281,18 +288,75 @@ class task
    * compound task will start submitting its subtasks to their respective
    * @ref runner "runners" for execution.
    *
-   * @param param_ the parameater forwarded to the task.
+   * @param param_ the parameter forwarded to the task.
    */
-  void run(/*parameter_t&& param_*/)
-  { }
+  void run(parameter_t&& param_)
+  {
+    if (m_impl == nullptr)
+      throw exception::illegal_state("this task object is not valid");
 
-  task() { }
+    auto aux = static_cast<typename impl::types<ResultT, ParamT>::binder_type_ptr>(m_impl->m_ctx.simple()->unbound());
+    m_impl->m_ctx.simple()->entry_point((*aux)(m_impl, param_));
+    entrails::kick(m_impl);
+  }
 
-  task(impl::info* inf_) : m_impl(inf_)
+  task(const impl::context_ptr& arg_) : m_impl(arg_)
   { /* noop */ }
 
  private:
-  std::unique_ptr<impl::info> m_impl;
+  impl::context_ptr m_impl;
+};
+
+// ------ task specialization for tasks with no input parameter
+//
+template <typename TagT, typename ResultT>
+class task<TagT, ResultT, void>
+{
+ public:
+  using this_t       = task;
+  using result_t     = ResultT;
+  using parameter_t  = void;
+
+ public:
+
+  template <typename FunctionT>
+  task(const runner::weak_ptr& r_, FunctionT&& f_) : m_impl(nullptr)
+  { /* noop */ }
+
+  template <typename... TaskT>
+  task<impl::tag::parallel
+      , typename impl::traits::parallel_result<this_t, TaskT...>::type
+      , parameter_t>
+  parallel(TaskT&&... tasks);
+
+  template <typename... TaskT>
+  task<impl::tag::serial
+     , typename impl::traits::sequence_result<this_t, TaskT...>::type
+     , parameter_t>
+  sequential(TaskT&&... tasks);
+
+  template <typename... HandlerTaskT>
+  task<impl::tag::serial, ResultT, void>
+  intercept(HandlerTaskT&&... handlers);
+
+  template <typename HandlerTaskT>
+  task<impl::tag::serial, ResultT, void>
+  intercept_all(HandlerTaskT&& handler);
+
+  void run()
+  {
+    auto aux = static_cast<typename impl::types<ResultT, void>::binder_type_ptr>(m_impl->m_ctx.simple()->unbound());
+    m_impl->m_ctx.simple()->entry_point((*aux)(m_impl));
+    entrails::kick(m_impl);
+  }
+
+ private:
+  friend class taskop;
+  task(const impl::context_ptr& arg_) : m_impl(arg_)
+  { /* noop */ }
+
+ private:
+  impl::context_ptr m_impl;
 };
 
 /**
@@ -349,9 +413,10 @@ class taskop
    * @warning The @em Callable should not contain blocking code.
    */
   template <typename CallableT>
-  static task<typename impl::traits::function_traits<CallableT>::result_type
+  static task<impl::tag::simple
+            , typename impl::traits::function_traits<CallableT>::result_type
             , typename impl::traits::arg_type<1, CallableT>::type>
-  create(const runner::weak_ptr_t& r_, CallableT&& f_)
+  create(const runner::weak_ptr& r_, CallableT&& f_)
   {
     // check number of parameters and the type of the first parameter
     static_assert(
@@ -359,7 +424,7 @@ class taskop
       , "Callable with signature RetT (const runner::ptr_t& [, argument]) is required to construct a task");
     static_assert(
         std::is_same<
-            runner::ptr_t
+            runner::ptr
           , typename std::decay<typename impl::traits::function_traits<CallableT>::template arg<0>::type>::type>
         ::value
       , "Callable with signature RetT (const runner::ptr_t& [, argument]) is required to construct a task");
@@ -367,7 +432,8 @@ class taskop
     using result_t = typename impl::traits::function_traits<CallableT>::result_type;
     using param_t  = typename impl::traits::arg_type<1, CallableT>::type;
 
-    return task<result_t, param_t>(impl::task_factory<result_t, param_t>::create(r_, f_));
+    return task<impl::tag::simple, result_t, param_t>(
+        impl::task_manufactory<result_t, param_t, impl::tag::simple>::create(r_, f_));
   }
 
   /**
@@ -405,20 +471,24 @@ class taskop
    *       compound task will behave as if the task that could not have been
    *       run threw @ref runner_not_available exception.
    */
+#if 0
   template <typename... TaskT>
-  static task<typename impl::traits::parallel_result<TaskT...>::type
+  static task<impl::tag::parallel
+            , typename impl::traits::parallel_result<TaskT...>::type
             , typename impl::traits::first_task<TaskT...>::type::parameter_t>
-  parallel(TaskT&&... t)
+  parallel(TaskT&&... t_)
   {
+    using result_t = typename impl::traits::parallel_result<TaskT...>::type;
+    using param_t = typename impl::traits::first_task<TaskT...>::type::parameter_t;
+
     static_assert(
         impl::traits::all_same<typename std::decay<typename std::decay<TaskT>::type::parameter_t>::type...>::value
       , "All parallel tasks must have the same parameter type or no parameter");
 
-    return task<typename impl::traits::parallel_result<TaskT...>::type
-              , typename impl::traits::first_task<TaskT...>::type::parameter_t
-          >();
+    return task<impl::tag::parallel, result_t, param_t>(
+        impl::task_factory<impl::tag::parallel, result_t, param_t>::create());
   }
-
+#endif
   /**
    * Create a compound task which will execute its subtasks one after another.
    *
@@ -447,83 +517,141 @@ class taskop
    *       compound task will behave as if the task that could not have been
    *       run threw @ref runner_not_available exception.
    */
+#if 0
   template <typename... TaskT>
-  static task<typename impl::traits::sequence_result<TaskT...>::type
+  static task<impl::tag::serial
+            , typename impl::traits::sequence_result<TaskT...>::type
             , typename impl::traits::first_task<TaskT...>::type::parameter_t>
-  sequential(TaskT&&... t)
+  sequential(TaskT&&... t_)
   {
-    static_assert(
-        impl::traits::are_chained<typename std::decay<TaskT>::type...>::value
-      , "The type of the parameter of each task in the sequence must match the return type of the preceding task.");
-    return task<typename impl::traits::sequence_result<TaskT...>::type
-              , typename impl::traits::first_task<TaskT...>::type::parameter_t
-          >();
-  }
+    using result_t = typename impl::traits::sequence_result<TaskT...>::type;
+    using param_t = typename impl::traits::first_task<TaskT...>::type::parameter_t;
 
+    static_assert(
+        impl::traits::all_chained<typename std::decay<TaskT>::type...>::result::value
+      , "The type of the parameter of each task in the sequence must match the return type of the preceding task.");
+    return task<impl::tag::serial, result_t, param_t>(
+        impl::task_factory<impl::tag::serial, result_t, param_t>::create());
+  }
+#endif
   /**
    * Add an exception handler(s) to the task.
    */
+#if 0
   template <typename TaskT, typename... HandlerTaskT>
-  static TaskT intercept(TaskT&& task, HandlerTaskT&&... handlers)
+  static task<impl::tag::serial, typename TaskT::result_t, typename TaskT::param_t>
+  intercept(TaskT&& t_, HandlerTaskT&&... handlers)
   {
+    using result_t = typename TaskT::result_t;
+    using param_t = typename TaskT::parameter_t;
+
     static_assert(
         impl::traits::all_same<typename TaskT::result_t, typename HandlerTaskT::result_t...>::value
       , "The task and its exception handlers must have the same result type");
-    return TaskT();
+    return task<impl::tag::serial, result_t, param_t>(
+        impl::task_factory<impl::tag::serial, result_t, param_t>::create());
   }
+#endif
   /**
    * Add an exception handler to the task.
    */
+#if 0
   template <typename TaskT, typename HandlerTaskT>
-  static TaskT intercept_all(TaskT&& task, HandlerTaskT&& handler)
+  static task<impl::tag::serial, typename TaskT::result_t, typename TaskT::param_t>
+  intercept_all(TaskT&& t_, HandlerTaskT&& handler)
   {
+    using result_t = typename TaskT::result_t;
+    using param_t = typename TaskT::parameter_t;
+
     static_assert(
         std::is_same<typename TaskT::result_t, typename HandlerTaskT::result_t>::value
       , "The task and its exception handlers must have the same result type");
     static_assert(
         std::is_same<std::exception_ptr, typename std::decay<typename HandlerTaskT::parameter_t>::type>::value
       , "The exception handler to catch all exceptions must accept std::exception_ptr as its parameter");
-    return TaskT();
+    return task<impl::tag::serial, result_t, param_t>(
+        impl::task_factory<impl::tag::serial, result_t, param_t>::create());
   }
+#endif
 };
 
 // ---------------------------------------------------------------------------
 // implementation of task methods
-
-template <typename ResultT, typename ParameterT>
+#if 0
+template <typename TagT, typename ResultT, typename ParameterT>
 template <typename... HandlerTaskT>
-inline task<ResultT, ParameterT>
-task<ResultT, ParameterT>::intercept(HandlerTaskT&&... handlers)
+inline task<impl::tag::serial, ResultT, ParameterT>
+task<TagT, ResultT, ParameterT>::intercept(HandlerTaskT&&... handlers)
 {
   return taskop::intercept(*this, std::forward<HandlerTaskT>(handlers)...);
 }
 
-template <typename ResultT, typename ParameterT>
+template <typename TagT, typename ResultT, typename ParameterT>
 template <typename HandlerTaskT>
-inline task<ResultT, ParameterT>
-task<ResultT, ParameterT>::intercept_all(HandlerTaskT&& handler)
+inline task<impl::tag::serial, ResultT, ParameterT>
+task<TagT, ResultT, ParameterT>::intercept_all(HandlerTaskT&& handler)
 {
   return taskop::intercept_all(*this, std::forward<HandlerTaskT>(handler));
 }
 
-template<typename ResultT, typename ParameterT>
+template <typename TagT, typename ResultT, typename ParameterT>
 template <typename... TaskT>
-inline task<typename impl::traits::parallel_result<task<ResultT, ParameterT>, TaskT...>::type
+inline task<impl::tag::parallel
+          , typename impl::traits::parallel_result<task<TagT, ResultT, ParameterT>, TaskT...>::type
           , ParameterT>
-task<ResultT, ParameterT>::parallel(TaskT&&... tasks)
+task<TagT, ResultT, ParameterT>::parallel(TaskT&&... tasks)
 {
   return taskop::parallel(*this, std::forward<TaskT>(tasks)...);
 }
 
-template<typename ResultT, typename ParameterT>
+template <typename TagT, typename ResultT, typename ParameterT>
 template <typename... TaskT>
-inline task<typename impl::traits::sequence_result<task<ResultT, ParameterT>, TaskT...>::type
+inline task<impl::tag::serial
+          , typename impl::traits::sequence_result<task<TagT, ResultT, ParameterT>, TaskT...>::type
           , ParameterT>
-task<ResultT, ParameterT>::sequential(TaskT&&... tasks)
+task<TagT, ResultT, ParameterT>::sequential(TaskT&&... tasks)
 {
   return taskop::sequential(*this, std::forward<TaskT>(tasks)...);
 }
 
+// ---- implementation of task methods for void partial specialization
+
+template <typename TagT, typename ResultT>
+template <typename... HandlerTaskT>
+inline task<impl::tag::serial, ResultT, void>
+task<TagT, ResultT, void>::intercept(HandlerTaskT&&... handlers)
+{
+  return taskop::intercept(*this, std::forward<HandlerTaskT>(handlers)...);
+}
+
+template <typename TagT, typename ResultT>
+template <typename HandlerTaskT>
+inline task<impl::tag::serial, ResultT, void>
+task<TagT, ResultT, void>::intercept_all(HandlerTaskT&& handler)
+{
+  return taskop::intercept_all(*this, std::forward<HandlerTaskT>(handler));
+}
+
+template<typename TagT, typename ResultT>
+template <typename... TaskT>
+inline task<impl::tag::parallel
+          , typename impl::traits::parallel_result<task<TagT, ResultT, void>, TaskT...>::type
+          , void>
+task<TagT, ResultT, void>::parallel(TaskT&&... tasks)
+{
+  return taskop::parallel(*this, std::forward<TaskT>(tasks)...);
+}
+
+template<typename TagT, typename ResultT>
+template <typename... TaskT>
+inline task<impl::tag::serial
+          , typename impl::traits::sequence_result<task<TagT, ResultT, void>, TaskT...>::type
+          , void>
+task<TagT, ResultT, void>::sequential(TaskT&&... tasks)
+{
+  return taskop::sequential(*this, std::forward<TaskT>(tasks)...);
+}
+#endif
 } } // namespace
 
 #endif
