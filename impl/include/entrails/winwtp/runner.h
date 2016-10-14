@@ -39,7 +39,7 @@ class poolmgr;
 
 class runner : public misc::named
 {
-  using queue_t = std::deque<impl::context_ptr>;
+  using queue_t = HANDLE;
 
  public:
   runner(RunPolicy policy_);
@@ -55,10 +55,9 @@ class runner : public misc::named
   void start_work();
 
  private:
-  PTP_WORK             m_work;
-  queue_t              m_fifo;
-  std::atomic<boolean> m_busy;
-  std::mutex           m_;
+  PTP_WORK          m_work;
+  queue_t           m_fifo;
+  std::atomic<bool> m_work_in_progress;
 
   static std::atomic<unsigned int> m_refcnt;
   static std::unique_ptr<poolmgr>  m_pool;

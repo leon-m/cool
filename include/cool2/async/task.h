@@ -300,6 +300,8 @@ class task
     entrails::kick(m_impl);
   }
 
+ private:
+  friend class taskop;
   task(const impl::context_ptr& arg_) : m_impl(arg_)
   { /* noop */ }
 
@@ -318,10 +320,6 @@ class task<TagT, ResultT, void>
   using parameter_t  = void;
 
  public:
-
-  template <typename FunctionT>
-  task(const runner::weak_ptr& r_, FunctionT&& f_) : m_impl(nullptr)
-  { /* noop */ }
 
   template <typename... TaskT>
   task<impl::tag::parallel
@@ -433,7 +431,7 @@ class taskop
     using param_t  = typename impl::traits::arg_type<1, CallableT>::type;
 
     return task<impl::tag::simple, result_t, param_t>(
-        impl::task_manufactory<result_t, param_t, impl::tag::simple>::create(r_, f_));
+        impl::task_factory<result_t, param_t, impl::tag::simple>::create(r_, f_));
   }
 
   /**
@@ -517,7 +515,6 @@ class taskop
    *       compound task will behave as if the task that could not have been
    *       run threw @ref runner_not_available exception.
    */
-#if 0
   template <typename... TaskT>
   static task<impl::tag::serial
             , typename impl::traits::sequence_result<TaskT...>::type
@@ -531,9 +528,8 @@ class taskop
         impl::traits::all_chained<typename std::decay<TaskT>::type...>::result::value
       , "The type of the parameter of each task in the sequence must match the return type of the preceding task.");
     return task<impl::tag::serial, result_t, param_t>(
-        impl::task_factory<impl::tag::serial, result_t, param_t>::create());
+        impl::task_factory<result_t, param_t, impl::tag::serial>::create(t_.m_impl...));
   }
-#endif
   /**
    * Add an exception handler(s) to the task.
    */
@@ -603,7 +599,7 @@ task<TagT, ResultT, ParameterT>::parallel(TaskT&&... tasks)
 {
   return taskop::parallel(*this, std::forward<TaskT>(tasks)...);
 }
-
+#endif
 template <typename TagT, typename ResultT, typename ParameterT>
 template <typename... TaskT>
 inline task<impl::tag::serial
@@ -613,7 +609,7 @@ task<TagT, ResultT, ParameterT>::sequential(TaskT&&... tasks)
 {
   return taskop::sequential(*this, std::forward<TaskT>(tasks)...);
 }
-
+#if 0
 // ---- implementation of task methods for void partial specialization
 
 template <typename TagT, typename ResultT>
@@ -641,7 +637,7 @@ task<TagT, ResultT, void>::parallel(TaskT&&... tasks)
 {
   return taskop::parallel(*this, std::forward<TaskT>(tasks)...);
 }
-
+#endif
 template<typename TagT, typename ResultT>
 template <typename... TaskT>
 inline task<impl::tag::serial
@@ -651,7 +647,6 @@ task<TagT, ResultT, void>::sequential(TaskT&&... tasks)
 {
   return taskop::sequential(*this, std::forward<TaskT>(tasks)...);
 }
-#endif
 } } // namespace
 
 #endif

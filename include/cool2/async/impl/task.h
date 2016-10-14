@@ -44,12 +44,10 @@ class runner_not_available : public cool::exception::runtime_exception
 enum class context_type { not_set, simple, parallel, serial, intercept };
 namespace tag
 {
-
-  struct simple    { static constexpr context_type value = context_type::simple;    };
-  struct serial    { static constexpr context_type value = context_type::serial;    };
-  struct parallel  { static constexpr context_type value = context_type::parallel;  };
-  struct intercept { static constexpr context_type value = context_type::intercept; };
-  
+struct simple    { static constexpr context_type value = context_type::simple;    };
+struct serial    { static constexpr context_type value = context_type::serial;    };
+struct parallel  { static constexpr context_type value = context_type::parallel;  };
+struct intercept { static constexpr context_type value = context_type::intercept; };
 } // namespace
 
 struct context;
@@ -78,7 +76,6 @@ template<typename ResultT> class types<ResultT, void>
   using binder_type         = std::function<bound_entry_point(const context_ptr&)>;
   using binder_type_ptr     = binder_type*;
   using binder_result       = bound_entry_point;
-
 };
 
 // ----------------------------------------------------------------------------
@@ -152,6 +149,24 @@ class context
 
 } // namespace
 
+namespace serial
+{
+
+class context
+{
+  using sequence_type = std::vector<context_ptr>;
+
+ public:
+  context(std::size_t set_size_) : m_sequence(set_size_) { /* noop */ }
+  sequence_type& sequence()             { return m_sequence; }
+  const sequence_type& sequence() const { return m_sequence; }
+
+ private:
+  sequence_type m_sequence;
+};
+
+}
+
 class u_one_of
 {
  public:
@@ -188,6 +203,11 @@ struct context
 {
   template <typename ContextT>
   context(const runner::weak_ptr& r_, const std::shared_ptr<ContextT>& c_) : m_runner(r_)
+  {
+    m_ctx.set(c_);
+  }
+  template <typename ContextT>
+  context(const std::shared_ptr<ContextT>& c_)
   {
     m_ctx.set(c_);
   }
@@ -320,14 +340,14 @@ class binder_factory<ResultT, void, tag::simple> : public types<ResultT, void>
 //
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
-template <typename ResultT, typename ParamT, typename TagT> class task_manufactory { };
+template <typename ResultT, typename ParamT, typename TagT> class task_factory { };
 
 // ----------------------------------------------------------------------------
 //
 // Task factories for simple tasks
 //
 template <typename ResultT, typename ParamT>
-class task_manufactory<ResultT, ParamT, tag::simple> : public types<ResultT, ParamT>
+class task_factory<ResultT, ParamT, tag::simple> : public types<ResultT, ParamT>
 {
  public:
   using typename types<ResultT, ParamT>::user_callable;
@@ -356,7 +376,7 @@ class task_manufactory<ResultT, ParamT, tag::simple> : public types<ResultT, Par
 };
 
 template <typename ResultT>
-class task_manufactory<ResultT, void, tag::simple> : public types<ResultT, void>
+class task_factory<ResultT, void, tag::simple> : public types<ResultT, void>
 {
  public:
   using typename types<ResultT, void>::user_callable;
@@ -382,6 +402,26 @@ class task_manufactory<ResultT, void, tag::simple> : public types<ResultT, void>
   }
 };
 
+// ----------------------------------------------------------------------------
+//
+// Task factories for sequential tasks
+//
+template <typename ResultT, typename ParamT>
+class task_factory<ResultT, ParamT, tag::serial>  : public types<ResultT, ParamT>
+{
+ public:
+  using typename types<ResultT, ParamT>::entry_point;
+  using typename types<ResultT, ParamT>::binder_type;
+
+ public:
+  template <typename ...TaskT>
+  static context_ptr create(TaskT&&...tasks)
+  {
+    auto ctx = std::make_shared<context>(std::make_shared<serial::context>(sizeof...(TaskT)));
+    return ctx;
+
+  }
+};
 
 } } } // namespace
 

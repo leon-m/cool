@@ -23,6 +23,14 @@
 
 namespace cool { namespace async { namespace entrails {
 
+struct exec_info
+{
+  impl::context_ptr m_context;
+};
+
+constexpr const int TASK = 1;
+
+
 class poolmgr
 {
  public:
@@ -62,25 +70,45 @@ std::atomic<unsigned int> runner::m_refcnt(0);
 runner::runner(RunPolicy policy_)
     : named("si.digiverse.cool2.runner")
     , m_work(NULL)
-    , m_busy(false)
+    , m_fifo(NULL)
+    , m_work_in_progress(false)
     , m_is_system(false)
     , m_active(true)
 {
   if (m_refcnt++ == 0)
     m_pool.reset(new poolmgr());
-  // Create work with the callback environment.
-  m_work = CreateThreadpoolWork(task_executor, this, m_pool->get_environ());
-  if (m_work == NULL)
-    throw exception::operation_failed("failed to create work");
+
+  try {
+    m_fifo = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 1);
+    if (m_fifo == NULL)
+      throw cool::exception::operation_failed("failed to create i/o completion port");
+
+    try {
+      // Create work with the callback environment.
+      m_work = CreateThreadpoolWork(task_executor, this, m_pool->get_environ());
+      if (m_work == NULL)
+        throw exception::operation_failed("failed to create work");
+    }
+    catch (...) {
+      CloseHandle(m_fifo);
+      throw;
+    }
+  }
+  catch (...) {
+    if (--m_refcnt == 0)
+      m_pool.reset();
+    throw;
+  }
+
 }
 
 runner::~runner()
 {
-	{
-		std::unique_lock<std::mutex> l(m_);
   if  (m_work != NULL)
     CloseThreadpoolWork(m_work);
-  }
+
+  if (m_fifo != NULL)
+    CloseHandle(m_fifo);
 
   if (--m_refcnt == 0)
     m_pool.reset();
@@ -101,36 +129,39 @@ VOID CALLBACK runner::task_executor(PTP_CALLBACK_INSTANCE instance_, PVOID pv_, 
 
 void runner::task_executor()
 {
-  impl::context_ptr ctx;
+  LPOVERLAPPED aux;
+  DWORD        cmd;
+  ULONG_PTR    key;
+
+  if (!GetQueuedCompletionStatus(m_fifo, &cmd, &key, &aux, 0))
   {
-    std::unique_lock<std::mutex> l(m_);
-    ctx = m_fifo.front();
-    m_fifo.pop_front();
+    m_work_in_progress = false;
+    return;
   }
+
+  if (cmd != TASK)
+    return;
+
+  auto exec = reinterpret_cast<exec_info*>(aux);
+  auto ctx = exec->m_context;
+  delete exec;
 
   auto r = ctx->m_runner.lock();
   if (r)
     ctx->m_ctx.simple()->entry_point()(r, ctx);
 
-  {
-    std::unique_lock<std::mutex> l(m_);
-
-    if (m_fifo.empty())
-      m_busy = false;
-    else
-      start_work();
-  }
+  start_work();
 }
 
 void runner::run(const impl::context_ptr& ctx_)
 {
-  {
-    std::unique_lock<std::mutex> l(m_);
-    m_fifo.push_back(ctx_);
-  }
-  boolean expected = false;
-  if (m_busy.compare_exchange_strong(expected, true))
-     start_work();
+  auto aux = new exec_info;
+  aux->m_context = ctx_;
+  PostQueuedCompletionStatus(m_fifo, TASK, NULL, reinterpret_cast<LPOVERLAPPED>(aux));
+
+  bool expected = false;
+  if (m_work_in_progress.compare_exchange_strong(expected, true))
+    start_work();
 }
 
 void runner::start_work()
