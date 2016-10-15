@@ -25,11 +25,6 @@
 
 namespace cool { namespace async { namespace entrails {
 
-struct exec_info
-{
-  impl::context_ptr m_context;
-};
-
 runner::runner(RunPolicy policy_)
     : named("si.digiverse.cool2.runner")
     , m_is_system(false)
@@ -82,28 +77,23 @@ void runner::stop()
 
 void runner::run(const impl::context_ptr& ctx_)
 {
-  auto aux = new exec_info;
-  aux->m_context = ctx_;
+  ctx_->m_self = ctx_; // keeps self alive while in the task queue
 
-  ::dispatch_async_f(m_queue, aux, task_executor);
+  ::dispatch_async_f(m_queue, ctx_.get(), task_executor);
 }
 
 // executor for task::run()
 void runner::task_executor(void* ctx_)
 {
-  auto aux = static_cast<exec_info*>(ctx_);
-  auto ctx = aux->m_context;
-  delete aux;
-
+  auto aux = static_cast<impl::context*>(ctx_);
+  auto ctx = std::move(aux->m_self);
   auto r = ctx->m_runner.lock();
+
   if (r)
-    r->impl()->task_executor(r, ctx);
+  {
+    ctx->m_ctx.simple()->entry_point()(r, ctx);
+  }
 }
   
-void runner::task_executor(const async::runner::ptr& r_, const impl::context_ptr& ctx_)
-{
-  ctx_->m_ctx.simple()->entry_point()(r_, ctx_);
-}
-
 
 } } } // namespace

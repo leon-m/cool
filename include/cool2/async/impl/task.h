@@ -213,6 +213,7 @@ struct context
   }
   runner::weak_ptr m_runner;
   u_one_of         m_ctx;
+  context_ptr      m_self;  // lifeline while in execution
 };
 
 

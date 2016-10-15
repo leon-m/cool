@@ -264,45 +264,6 @@ TEST(runner, sequence_of_tasks)
     EXPECT_EQ(6, step);
   }
 }
-
-TEST(runner, big_sequence_of_tasks)
-{
-  {
-    auto r = std::make_shared<runner>(RunPolicy::SEQUENTIAL);
-    cool::basis::vow<void> v_;
-    auto a_ = v_.get_aim();
-    int step = 0;
-
-    std::vector <task<impl::tag::simple, void, void>> tasks;
-    for (int i = 0; i < 1000000; ++i)
-      tasks.push_back(taskop::create(
-          r
-        , [i, &step](const runner::ptr& r_)
-          {
-            if (i == step)
-              ++step;
-          }
-      ));
-
-    tasks.push_back(taskop::create(
-      r
-      , [&v_](const runner::ptr&)
-        {
-          v_.set();
-        }
-    ));
-
-    auto t_start = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < tasks.size(); ++i)
-    {
-      tasks[i].run();
-    }
-    EXPECT_NO_THROW(a_.get(ms(30000)));
-    auto t_stop = std::chrono::high_resolution_clock::now();
-    std::cout << "Time units: " << std::chrono::duration_cast<std::chrono::milliseconds>(t_stop - t_start).count() << "\n";
-    EXPECT_EQ(1000000, step);
-  }
-}
 // --------------------------------------------------------------------------
 //
 //

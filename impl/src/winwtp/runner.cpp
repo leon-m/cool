@@ -23,13 +23,7 @@
 
 namespace cool { namespace async { namespace entrails {
 
-struct exec_info
-{
-  impl::context_ptr m_context;
-};
-
 constexpr const int TASK = 1;
-
 
 class poolmgr
 {
@@ -142,11 +136,9 @@ void runner::task_executor()
   if (cmd != TASK)
     return;
 
-  auto exec = reinterpret_cast<exec_info*>(aux);
-  auto ctx = exec->m_context;
-  delete exec;
-
+  auto ctx = std::move(reinterpret_cast<impl::context*>(aux)->m_self);
   auto r = ctx->m_runner.lock();
+
   if (r)
     ctx->m_ctx.simple()->entry_point()(r, ctx);
 
@@ -155,9 +147,8 @@ void runner::task_executor()
 
 void runner::run(const impl::context_ptr& ctx_)
 {
-  auto aux = new exec_info;
-  aux->m_context = ctx_;
-  PostQueuedCompletionStatus(m_fifo, TASK, NULL, reinterpret_cast<LPOVERLAPPED>(aux));
+  ctx_->m_self = ctx_;  // keeps self alive while in the task queue
+  PostQueuedCompletionStatus(m_fifo, TASK, NULL, reinterpret_cast<LPOVERLAPPED>(ctx_.get()));
 
   bool expected = false;
   if (m_work_in_progress.compare_exchange_strong(expected, true))

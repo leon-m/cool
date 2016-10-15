@@ -45,7 +45,7 @@ void big_test()
 
   try
   {
-    a_.get(std::chrono::milliseconds(30000));
+    a_.get(std::chrono::milliseconds(60000));
     auto t_stop = std::chrono::high_resolution_clock::now();
   
     uint64_t period = std::chrono::duration_cast<std::chrono::milliseconds>(t_stop - t_start).count();

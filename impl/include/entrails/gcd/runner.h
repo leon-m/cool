@@ -47,7 +47,6 @@ class runner : public misc::named
 
  private:
   static void task_executor(void*);
-  void task_executor(const async::runner::ptr&, const impl::context_ptr&);
 
  private:
   const bool        m_is_system;
