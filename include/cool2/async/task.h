@@ -295,18 +295,16 @@ class task
     if (m_impl == nullptr)
       throw exception::illegal_state("this task object is not valid");
 
-    auto aux = static_cast<typename impl::types<ResultT, ParamT>::binder_type_ptr>(m_impl->m_ctx.simple()->unbound());
-    m_impl->m_ctx.simple()->entry_point((*aux)(m_impl, param_));
-    entrails::kick(m_impl);
+    entrails::kick(impl::task_factory<ResultT, ParamT, TagT>::make_context(m_impl, param_));
   }
 
  private:
   friend class taskop;
-  task(const impl::context_ptr& arg_) : m_impl(arg_)
+  task(const impl::taskinfo_ptr& arg_) : m_impl(arg_)
   { /* noop */ }
 
  private:
-  impl::context_ptr m_impl;
+  impl::taskinfo_ptr m_impl;
 };
 
 // ------ task specialization for tasks with no input parameter
@@ -343,18 +341,16 @@ class task<TagT, ResultT, void>
 
   void run()
   {
-    auto aux = static_cast<typename impl::types<ResultT, void>::binder_type_ptr>(m_impl->m_ctx.simple()->unbound());
-    m_impl->m_ctx.simple()->entry_point((*aux)(m_impl));
-    entrails::kick(m_impl);
+    entrails::kick(impl::task_factory<ResultT, void, TagT>::make_context(m_impl));
   }
 
  private:
   friend class taskop;
-  task(const impl::context_ptr& arg_) : m_impl(arg_)
+  task(const impl::taskinfo_ptr& arg_) : m_impl(arg_)
   { /* noop */ }
 
  private:
-  impl::context_ptr m_impl;
+  impl::taskinfo_ptr m_impl;
 };
 
 /**
@@ -374,7 +370,7 @@ class taskop
    *   - it can be a function pointer, lambda closure, @c std::function, or
    *     a functor object as long as it provides a single overload of the
    *     function call operator <tt>()</tt>.
-   *   - it must accept <tt>const runner::ptr_t>&</tt> as its first
+   *   - it must accept <tt>const runner::weak_ptr>&</tt> as its first
    *     parameter
    *   - it may accept one additional input parameter which is then the input
    *     parameter of the task
@@ -383,7 +379,7 @@ class taskop
    * The @em Callable implementation should not contain any blocking code. The
    * blocking code will block the worker thread executing the callable. Since
    * the number of working threads in the pool may be limited (optimal number
-   * should be close to the number of precessor cores to avoid context switches)
+   * should be close to the number of precessor cores to avoid taskinfo switches)
    * the pool may run out of the active, non-blocked threads, will will block
    * the execution of the entire program. The @em Callable implementation should
    * use I/O event sources instead of blocking read/write calls, and should
@@ -419,13 +415,13 @@ class taskop
     // check number of parameters and the type of the first parameter
     static_assert(
         2 >= impl::traits::function_traits<CallableT>::arity::value && 0 < impl::traits::function_traits<CallableT>::arity::value
-      , "Callable with signature RetT (const runner::ptr_t& [, argument]) is required to construct a task");
+      , "Callable with signature RetT (const runner::ptr& [, argument]) is required to construct a task");
     static_assert(
         std::is_same<
             runner::ptr
           , typename std::decay<typename impl::traits::function_traits<CallableT>::template arg<0>::type>::type>
         ::value
-      , "Callable with signature RetT (const runner::ptr_t& [, argument]) is required to construct a task");
+      , "Callable with signature RetT (const runner::ptr& [, argument]) is required to construct a task");
 
     using result_t = typename impl::traits::function_traits<CallableT>::result_type;
     using param_t  = typename impl::traits::arg_type<1, CallableT>::type;

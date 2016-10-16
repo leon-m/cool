@@ -69,7 +69,7 @@ void kick(const impl::context_ptr& ctx_)
   if (!ctx_)
     throw cool::exception::illegal_state("this task object is in undefined state");
 
-  auto aux = ctx_->m_runner.lock();
+  auto aux = ctx_->m_info->m_runner.lock();
   if (!aux)
     throw runner_not_available();
 
@@ -82,157 +82,12 @@ void kick(const impl::context_ptr& ctx_)
 // ----- implementation of impl::task helpers
 namespace impl {
 
-u_one_of::u_one_of() : m_type(context_type::not_set)
-{ /* noop */ }
-
-u_one_of::~u_one_of()
-{
-  release();
+namespace tag {
+const task_type simple::value;
+const task_type serial::value;
+const task_type parallel::value;
+const task_type intercept::value;
 }
-
-void u_one_of::release()
-{
-  switch (m_type)
-  {
-    case context_type::simple:    m_u.m_simple.~shared_ptr(); break;
-    case context_type::intercept: m_u.m_intercept.~shared_ptr(); break;
-    case context_type::serial:    m_u.m_serial.~shared_ptr(); break;
-    case context_type::parallel:  m_u.m_parallel.~shared_ptr(); break;
-    case context_type::not_set:   break;
-  }
-  m_type = context_type::not_set;
-}
-
-void u_one_of::set(const std::shared_ptr<simple::context>& arg_)
-{
-  release();
-  m_type = context_type::simple;
-  m_u.m_simple = arg_;
-}
-void u_one_of::set(const std::shared_ptr<serial::context>& arg_)
-{
-  release();
-  m_type = context_type::serial;
-  m_u.m_serial = arg_;
-}
-void u_one_of::set(const std::shared_ptr<parallel::context>& arg_)
-{
-  release();
-  m_type = context_type::parallel;
-  m_u.m_parallel = arg_;
-}
-void u_one_of::set(const std::shared_ptr<intercept::context>& arg_)
-{
-  release();
-  m_type = context_type::intercept;
-  m_u.m_intercept = arg_;
-}
-std::shared_ptr<simple::context> u_one_of::simple()
-{
-  if (m_type != context_type::simple)
-    throw cool::exception::bad_conversion("wrong content type");
-  return m_u.m_simple;
-}
-std::shared_ptr<serial::context> u_one_of::serial()
-{
-  if (m_type != context_type::serial)
-    throw cool::exception::bad_conversion("wrong content type");
-  return m_u.m_serial;
-}
-std::shared_ptr<parallel::context> u_one_of::parallel()
-{
-  if (m_type != context_type::parallel)
-    throw cool::exception::bad_conversion("wrong content type");
-  return m_u.m_parallel;
-}
-std::shared_ptr<intercept::context> u_one_of::intercept()
-{
-  if (m_type != context_type::intercept)
-    throw cool::exception::bad_conversion("wrong content type");
-  return m_u.m_intercept;
-}
-
-
-#if 0
-
-
-
-
-
-info::info() : m_type(TaskType::Unknown)
-{ /* noop */
-  std::cout << "+++++ info" << std::endl;
-}
-
-info::~info()
-{
-  std::cout << "----- info" << std::endl;
-  release();
-}
-
-void info::release()
-{
-  switch (m_type)
-  {
-    case TaskType::Simple:           u.m_simple.~shared_ptr(); break;
-    case TaskType::Intercept:        u.m_intercept.~shared_ptr(); break;
-    case TaskType::CompoundSerial:   u.m_serial.~shared_ptr(); break;
-    case TaskType::CompoundParallel: u.m_parallel.~shared_ptr(); break;
-    case TaskType::Unknown: break;
-  }
-  m_type = TaskType::Unknown;
-}
-
-void info::set(const std::shared_ptr<simple::info>& arg_)
-{
-  release();
-  m_type = TaskType::Simple;
-  u.m_simple = arg_;
-}
-void info::set(const std::shared_ptr<serial::info>& arg_)
-{
-  release();
-  m_type = TaskType::CompoundSerial;
-  u.m_serial = arg_;
-}
-void info::set(const std::shared_ptr<parallel::info>& arg_)
-{
-  release();
-  m_type = TaskType::CompoundParallel;
-  u.m_parallel = arg_;
-}
-void info::set(const std::shared_ptr<intercept::info>& arg_)
-{
-  release();
-  m_type = TaskType::Intercept;
-  u.m_intercept = arg_;
-}
-
-const task_callback_t& info::callable() const
-{
-  switch (m_type)
-  {
-    case TaskType::Simple:
-      return u.m_simple->m_callable.bound();
-    case TaskType::CompoundSerial:
-    case TaskType::CompoundParallel:
-      break;
-  }
-}
-
-std::weak_ptr<runner> info::runner() const
-{
-  switch (m_type)
-  {
-    case TaskType::Simple:
-      return u.m_simple->m_runner;
-    case TaskType::CompoundSerial:
-    case TaskType::CompoundParallel:
-      break;
-  }
-
-}
-#endif
 
 } // namespace
 

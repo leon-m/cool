@@ -136,19 +136,18 @@ void runner::task_executor()
   if (cmd != TASK)
     return;
 
-  auto ctx = std::move(reinterpret_cast<impl::context*>(aux)->m_self);
-  auto r = ctx->m_runner.lock();
+  auto ctx = reinterpret_cast<impl::context*>(aux);
+  auto r = ctx->m_info->m_runner.lock();
 
   if (r)
-    ctx->m_ctx.simple()->entry_point()(r, ctx);
+    ctx->m_ctx.simple().entry_point()(r, ctx);
 
   start_work();
 }
 
-void runner::run(const impl::context_ptr& ctx_)
+void runner::run(impl::context_ptr ctx_)
 {
-  ctx_->m_self = ctx_;  // keeps self alive while in the task queue
-  PostQueuedCompletionStatus(m_fifo, TASK, NULL, reinterpret_cast<LPOVERLAPPED>(ctx_.get()));
+  PostQueuedCompletionStatus(m_fifo, TASK, NULL, reinterpret_cast<LPOVERLAPPED>(ctx_));
 
   bool expected = false;
   if (m_work_in_progress.compare_exchange_strong(expected, true))

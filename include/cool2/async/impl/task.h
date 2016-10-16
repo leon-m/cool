@@ -41,74 +41,103 @@ class runner_not_available : public cool::exception::runtime_exception
   
 
 // ----- common types
-enum class context_type { not_set, simple, parallel, serial, intercept };
+enum class task_type { simple, parallel, serial, intercept };
+
 namespace tag
 {
-struct simple    { static constexpr context_type value = context_type::simple;    };
-struct serial    { static constexpr context_type value = context_type::serial;    };
-struct parallel  { static constexpr context_type value = context_type::parallel;  };
-struct intercept { static constexpr context_type value = context_type::intercept; };
+struct simple    { static const constexpr task_type value = task_type::simple;    };
+struct serial    { static const constexpr task_type value = task_type::serial;    };
+struct parallel  { static const constexpr task_type value = task_type::parallel;  };
+struct intercept { static const constexpr task_type value = task_type::intercept; };
 } // namespace
 
-struct context;
-using context_ptr = std::shared_ptr<context>;
-using bound_entry_point   = std::function<void(const runner::ptr&, const context_ptr&)>;
+struct taskinfo;      // static task data
+using taskinfo_ptr = std::shared_ptr<taskinfo>;
+struct context;       // task execution context
+using context_ptr = context*;
+
+using bound_entry_point   = std::function<void(const  runner::ptr&, context_ptr)>;
+using exception_reporter  = std::function<void(const std::exception_ptr&)>;
+using deleter_type        = void(*)(void*);
 
 template <typename ResultT, typename ParamT> class types
 {
  public:
   using user_callable       = std::function<ResultT(const runner::ptr&, const ParamT&)>;
-  using bound_user_callable = std::function<ResultT(const std::shared_ptr<runner>&)>;
-  using entry_point         = std::function<void(const runner::ptr&, const context_ptr&, const ParamT&)>;
+  using bound_user_callable = std::function<ResultT(const runner::ptr&)>;
+  using entry_point         = std::function<void(context_ptr, const ParamT&)>;
 
-  using binder_type         = std::function<bound_entry_point(const context_ptr&, const ParamT&)>;
+  using binder_type         = std::function<bound_entry_point(const taskinfo_ptr&, const ParamT&)>;
   using binder_type_ptr     = binder_type*;
   using binder_result       = bound_entry_point;
+  using result_reporter     = std::function<void(const ResultT&)>;
 };
 
-template<typename ResultT> class types<ResultT, void>
+template <typename ResultT> class types<ResultT, void>
 {
  public:
   using user_callable       = std::function<ResultT(const runner::ptr&)>;
-  using bound_user_callable = std::function<ResultT(const std::shared_ptr<runner>&)>;
-  using entry_point         = std::function<void(const runner::ptr&, const context_ptr&)>;
+  using bound_user_callable = std::function<ResultT(const runner::ptr&)>;
+  using entry_point         = std::function<void(context_ptr)>;
 
-  using binder_type         = std::function<bound_entry_point(const context_ptr&)>;
+  using binder_type         = std::function<bound_entry_point(const taskinfo_ptr&)>;
+  using binder_type_ptr     = binder_type*;
+  using binder_result       = bound_entry_point;
+  using result_reporter     = std::function<void(const ResultT&)>;
+};
+
+template <typename ParamT> class types<void, ParamT>
+{
+ public:
+  using user_callable       = std::function<void(const runner::ptr&, const ParamT&)>;
+  using bound_user_callable = std::function<void(const runner::ptr&)>;
+  using entry_point         = std::function<void(context_ptr, const ParamT&)>;
+
+  using binder_type         = std::function<bound_entry_point(const taskinfo_ptr&, const ParamT&)>;
   using binder_type_ptr     = binder_type*;
   using binder_result       = bound_entry_point;
 };
 
+template<> class types<void, void>
+{
+public:
+  using user_callable       = std::function<void(const runner::ptr&)>;
+  using bound_user_callable = std::function<void(const runner::ptr&)>;
+  using entry_point         = std::function<void(context_ptr)>;
+
+  using binder_type         = std::function<bound_entry_point(const taskinfo_ptr&)>;
+  using binder_type_ptr     = binder_type*;
+  using binder_result       = bound_entry_point;
+};
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 //
-// Task context structures for different task types
+// Task taskinfo structures for different task types
 //
 //
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-namespace simple    { class context; }
-namespace serial    { class context; }
-namespace parallel  { class context; }
-namespace intercept { class context; }
+namespace simple    { class taskinfo; class context; }
+namespace serial    { class taskinfo; class context; }
+namespace parallel  { class taskinfo; class context; }
+namespace intercept { class taskinfo; class context; }
 
 
 namespace simple
 {
 
-class context
+class taskinfo
 {
-  using cleaner_t = void(*)(void*);
-
  public:
-  context() : m_unbound(nullptr)
+  taskinfo() : m_unbound(nullptr)
   { /* noop */ }
-  ~context()
+  ~taskinfo()
   {
     if (m_unbound != nullptr)
       m_cleaner(m_unbound);
   }
-  void unbound(void* ubnd_, const cleaner_t& clr_)
+  void unbound(void* ubnd_, const deleter_type& clr_)
   {
     m_unbound = ubnd_;
     m_cleaner = clr_;
@@ -117,47 +146,46 @@ class context
   {
     return m_unbound;
   }
-  void entry_point(const bound_entry_point& arg_)
+ private:
+  void*              m_unbound;   // binder for user callable to pass parameter to ep
+  deleter_type       m_cleaner;   // delete function to delete binder instance
+};
+
+class context
+{
+ public:
+  context() : m_result(nullptr)                   { /* noop */ }
+  ~context()
   {
-    if (m_unbound)
-      m_cleaner(m_unbound);
-    m_unbound = nullptr;
-    m_ep = arg_;
+    if (m_result != nullptr)
+      (*m_deleter)(m_result);
   }
-  bound_entry_point& entry_point()
-  {
-    return m_ep;
-  }
-  bool has_exception() const
-  {
-    return !!m_exception;
-  }
-  std::exception_ptr exception() const
-  {
-    return m_exception;
-  }
-  void exception(const std::exception_ptr& arg_)
-  {
-    m_exception = arg_;
-  }
+
+  void entry_point(const bound_entry_point& arg_) { m_ep = arg_; }
+  bound_entry_point& entry_point()                { return m_ep; }
+  void exception(const exception_reporter& arg_)  { m_exception = arg_; }
+  const exception_reporter& exception() const     { return m_exception; }
+  void result(void* arg_, const deleter_type& d_) { m_result = arg_; m_deleter = d_; }
+  void* result() const                            { return m_result; }
+
  private:
   bound_entry_point  m_ep;        // user callable with bound input parameter
-  void*              m_unbound;   // binder for user callable to pass parameter to ep
-  cleaner_t          m_cleaner;   // delete function to delete binder instance
-  std::exception_ptr m_exception; // exception if thrown
+  exception_reporter m_exception; // function to use to report exception
+  void*              m_result;    // pointer to function to use to report result
+  deleter_type       m_deleter;
 };
+
 
 } // namespace
 
 namespace serial
 {
 
-class context
+class taskinfo
 {
-  using sequence_type = std::vector<context_ptr>;
+  using sequence_type = std::vector<taskinfo_ptr>;
 
  public:
-  context(std::size_t set_size_) : m_sequence(set_size_) { /* noop */ }
   sequence_type& sequence()             { return m_sequence; }
   const sequence_type& sequence() const { return m_sequence; }
 
@@ -165,57 +193,153 @@ class context
   sequence_type m_sequence;
 };
 
+class context
+{
+  
+};
+} // namespace
+
+namespace parallel
+{
+class taskinfo
+{
+
+};
+
+class context
+{
+
+};
+
+} // namespace
+
+namespace intercept
+{
+
+class taskinfo
+{
+
+};
+
+class context
+{
+
+};
+
 }
 
+template <typename SimpleT, typename SerialT, typename ParallelT, typename InterceptT>
 class u_one_of
 {
  public:
-  u_one_of();
-  ~u_one_of();
+  u_one_of(task_type t_) : m_type(t_)
+  {
+    m_u.m_simple.~SimpleT();  // union is initialized, destroy current object
 
-  void set(const std::shared_ptr<simple::context>& arg_);
-  void set(const std::shared_ptr<serial::context>& arg_);
-  void set(const std::shared_ptr<parallel::context>& arg_);
-  void set(const std::shared_ptr<intercept::context>& arg_);
+    switch (t_)
+    {
+      case task_type::simple:    new (&m_u.m_simple) SimpleT(); break;
+      case task_type::serial:    new (&m_u.m_serial) SerialT(); break;
+      case task_type::parallel:  new (&m_u.m_parallel) ParallelT; break;
+      case task_type::intercept: new (&m_u.m_intercept) InterceptT; break;
+    }
+  }
+  ~u_one_of()
+  {
+    switch (m_type)
+    {
+      case task_type::simple:    m_u.m_simple.~SimpleT(); break;
+      case task_type::serial:    m_u.m_serial.~SerialT(); break;
+      case task_type::parallel:  m_u.m_parallel.~ParallelT(); break;
+      case task_type::intercept: m_u.m_intercept.~InterceptT(); break;
+    }
+  }
 
   // getters will throw cool::exception::bad_conversion if wrong content type
-  std::shared_ptr<simple::context> simple();
-  std::shared_ptr<serial::context> serial();
-  std::shared_ptr<parallel::context> parallel();
-  std::shared_ptr<intercept::context> intercept();
+  SimpleT& simple()
+  {
+    if (m_type != task_type::simple)
+      throw cool::exception::bad_conversion("wrong content type");
+      return m_u.m_simple;
+  }
+  const SimpleT& simple() const
+  {
+    if (m_type != task_type::simple)
+      throw cool::exception::bad_conversion("wrong content type");
+    return m_u.m_simple;
+  }
+  SerialT& serial()
+  {
+    if (m_type != task_type::serial)
+      throw cool::exception::bad_conversion("wrong content type");
+    return m_u.m_serial;
+  }
+  const SerialT& serial() const
+  {
+    if (m_type != task_type::serial)
+      throw cool::exception::bad_conversion("wrong content type");
+    return m_u.m_serial;
+  }
+  ParallelT& parallel()
+  {
+    if (m_type != task_type::parallel)
+      throw cool::exception::bad_conversion("wrong content type");
+    return m_u.m_parallel;
+  }
+  const ParallelT& parallel() const
+  {
+    if (m_type != task_type::parallel)
+      throw cool::exception::bad_conversion("wrong content type");
+    return m_u.m_parallel;
+  }
+  InterceptT& intercept()
+  {
+    if (m_type != task_type::intercept)
+      throw cool::exception::bad_conversion("wrong content type");
+    return m_u.m_intercept;
+  }
+  const InterceptT& intercept() const
+  {
+    if (m_type != task_type::intercept)
+      throw cool::exception::bad_conversion("wrong content type");
+    return m_u.m_intercept;
+  }
 
  private:
-  void release();
-
- private:
-  context_type m_type;
+  const task_type m_type;
   union u_ {
     u_() : m_simple() { /* noop */ }
     ~u_()             { /* noop */ }
-    std::shared_ptr<simple::context>    m_simple;
-    std::shared_ptr<serial::context>    m_serial;
-    std::shared_ptr<parallel::context>  m_parallel;
-    std::shared_ptr<intercept::context> m_intercept;
+    SimpleT    m_simple;
+    SerialT    m_serial;
+    ParallelT  m_parallel;
+    InterceptT m_intercept;
   } m_u;
+};
+
+struct taskinfo
+{
+  using one_of = u_one_of<simple::taskinfo, serial::taskinfo, parallel::taskinfo, intercept::taskinfo>;
+
+  taskinfo(const runner::weak_ptr& r_, task_type t_) : m_runner(r_), m_info(t_)
+  { /* noop */  }
+  taskinfo(task_type t_) : m_info(t_)
+  { /* noop */  }
+
+  runner::weak_ptr m_runner;
+  one_of           m_info;
 };
 
 struct context
 {
-  template <typename ContextT>
-  context(const runner::weak_ptr& r_, const std::shared_ptr<ContextT>& c_) : m_runner(r_)
-  {
-    m_ctx.set(c_);
-  }
-  template <typename ContextT>
-  context(const std::shared_ptr<ContextT>& c_)
-  {
-    m_ctx.set(c_);
-  }
-  runner::weak_ptr m_runner;
-  u_one_of         m_ctx;
-  context_ptr      m_self;  // lifeline while in execution
-};
+  using one_of = u_one_of<simple::context, serial::context, parallel::context, intercept::context>;
 
+  context(task_type t_) : m_ctx(t_)
+  { /* noop */ }
+
+  one_of       m_ctx;
+  taskinfo_ptr m_info;
+};
 
 
 // ----------------------------------------------------------------------------
@@ -238,33 +362,36 @@ class task_wrapper<ResultT, tag::simple> : public types<ResultT, void>
 {
  public:
   using typename types<ResultT, void>::bound_user_callable;
+  using typename types<ResultT, void>::result_reporter;
 
  public:
-  static void ep(const runner::ptr& r_, const context_ptr& ctx_, const bound_user_callable& task_)
+  static void ep(const runner::ptr& r_, context_ptr ctx_, const bound_user_callable& task_)
   {
     try {
-       ResultT res = task_(r_);  // this is a call into user callable
-       // TODO: do something with result
+      ResultT res = task_(r_);  // this is a call into user callable
+      if (ctx_->m_ctx.simple().result() != nullptr)
+        (*static_cast<result_reporter*>(ctx_->m_ctx.simple().result()))(res);
     }
     catch (...) {
-      ctx_->m_ctx.simple()->exception(std::current_exception());
+      if (ctx_->m_ctx.simple().exception())
+        ctx_->m_ctx.simple().exception()(std::current_exception());
     }
   }
 };
 template <>
-class task_wrapper<void, tag::simple>
+class task_wrapper<void, tag::simple> : public types<void, void>
 {
  public:
-  using bound_user_callable = types<void, void>::bound_user_callable;
+  using types<void, void>::bound_user_callable;
 
  public:
-  static void ep(const runner::ptr& r_, const context_ptr& ctx_, const bound_user_callable& task_)
+  static void ep(const runner::ptr& r_, context_ptr ctx_, const bound_user_callable& task_)
   {
     try {
-       task_(r_);  // this is a call into user callable
+      task_(r_);  // this is a call into user callable
     }
     catch (...) {
-      ctx_->m_ctx.simple()->exception(std::current_exception());
+      ctx_->m_ctx.simple().exception()(std::current_exception());
     }
   }
 };
@@ -292,7 +419,7 @@ class binder_factory<ResultT, ParamT, tag::simple> : public types<ResultT, Param
   using typename types<ResultT, ParamT>::bound_user_callable;
 
  public:
-  static bound_entry_point rebind(const context_ptr& ctx_, user_callable& func_, const ParamT& par_)
+  static bound_entry_point rebind(const taskinfo_ptr& ctx_, user_callable& func_, const ParamT& par_)
   {
     return bound_entry_point(std::bind(
         task_wrapper<ResultT, tag::simple>::ep
@@ -317,7 +444,7 @@ class binder_factory<ResultT, void, tag::simple> : public types<ResultT, void>
   using typename types<ResultT, void>::bound_user_callable;
 
  public:
-  static bound_entry_point rebind(const context_ptr& ctx_, const user_callable& func_)
+  static bound_entry_point rebind(const taskinfo_ptr& ctx_, const user_callable& func_)
   {
     return bound_entry_point(std::bind(
         task_wrapper<ResultT, tag::simple>::ep
@@ -356,12 +483,12 @@ class task_factory<ResultT, ParamT, tag::simple> : public types<ResultT, ParamT>
   using typename types<ResultT, ParamT>::binder_type;
 
  public:
-  static context_ptr create(const runner::weak_ptr& r_, const user_callable& f_)
+  static taskinfo_ptr create(const runner::weak_ptr& r_, const user_callable& f_)
   {
     using binder_factory = binder_factory<ResultT, ParamT, tag::simple>;
 
-    auto ctx = std::make_shared<context>(r_, std::make_shared<simple::context>());
-    ctx->m_ctx.simple()->unbound(
+    auto info = std::make_shared<taskinfo>(r_, tag::simple::value);
+    info->m_info.simple().unbound(
         new binder_type(
               std::bind(
                   binder_factory::rebind
@@ -372,6 +499,15 @@ class task_factory<ResultT, ParamT, tag::simple> : public types<ResultT, ParamT>
         )
       , binder_factory::deleter
     );
+    return info;
+  }
+
+  static context_ptr make_context(const taskinfo_ptr& t_, const ParamT& p_)
+  {
+    auto aux = static_cast<typename impl::types<ResultT, ParamT>::binder_type_ptr>(t_->m_info.simple().unbound());
+    auto ctx = new context(tag::simple::value);
+    ctx->m_ctx.simple().entry_point((*aux)(t_, p_));
+    ctx->m_info = t_;
     return ctx;
   }
 };
@@ -384,12 +520,12 @@ class task_factory<ResultT, void, tag::simple> : public types<ResultT, void>
   using typename types<ResultT, void>::entry_point;
   using typename types<ResultT, void>::binder_type;
 
-  static context_ptr create(const runner::weak_ptr& r_, const user_callable& f_)
+  static taskinfo_ptr create(const runner::weak_ptr& r_, const user_callable& f_)
   {
     using binder_factory = binder_factory<ResultT, void, tag::simple>;
 
-    auto ctx = std::make_shared<context>(r_, std::make_shared<simple::context>());
-    ctx->m_ctx.simple()->unbound(
+    auto info = std::make_shared<taskinfo>(r_, tag::simple::value);
+    info->m_info.simple().unbound(
         new binder_type(
             std::bind(
                 binder_factory::rebind
@@ -399,6 +535,15 @@ class task_factory<ResultT, void, tag::simple> : public types<ResultT, void>
         )
       , binder_factory::deleter
     );
+    return info;
+  }
+
+  static context_ptr make_context(const taskinfo_ptr& t_)
+  {
+    auto aux = static_cast<typename impl::types<ResultT, void>::binder_type_ptr>(t_->m_info.simple().unbound());
+    auto ctx = new context(tag::simple::value);
+    ctx->m_ctx.simple().entry_point((*aux)(t_));
+    ctx->m_info = t_;
     return ctx;
   }
 };
@@ -416,10 +561,10 @@ class task_factory<ResultT, ParamT, tag::serial>  : public types<ResultT, ParamT
 
  public:
   template <typename ...TaskT>
-  static context_ptr create(TaskT&&...tasks)
+  static taskinfo_ptr create(TaskT&&...tasks)
   {
-    auto ctx = std::make_shared<context>(std::make_shared<serial::context>(sizeof...(TaskT)));
-    return ctx;
+    auto info = std::make_shared<taskinfo>(tag::serial::value);
+    return info;
 
   }
 };

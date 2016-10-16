@@ -272,14 +272,14 @@ TEST(runner, sequence_of_tasks)
 //
 //
 
-double d_f_d(runner::ptr r, double d) { return d; }
-void v_f_d(runner::ptr r, double d) {  }
-double d_f(runner::ptr r) { return 3; }
-void v_f(runner::ptr r) {  }
-double d_f_d_i(runner::ptr r, double d, int n) { return d; }
-void v_f_d_i(runner::ptr r, double d, int n) {  }
-double d_f_i(runner::ptr r, int n) { return 3; }
-void v_f_i(runner::ptr r, int n) {  }
+double d_f_d(const runner::ptr& r, double d) { return d; }
+void v_f_d(const runner::ptr& r, double d) {  }
+double d_f(const runner::ptr&) { return 3; }
+void v_f(const runner::ptr&) {  }
+double d_f_d_i(const runner::ptr& r, double d, int n) { return d; }
+void v_f_d_i(const runner::ptr& r, double d, int n) {  }
+double d_f_i(const runner::ptr& r, int n) { return 3; }
+void v_f_i(const runner::ptr& r, int n) {  }
 
 struct c_int_int  { int  operator ()(const runner::ptr& r, int n) { return 3; } };
 struct c_void_int { void operator ()(const runner::ptr& r, int n) { } };

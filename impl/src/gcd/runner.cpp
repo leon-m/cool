@@ -75,24 +75,21 @@ void runner::stop()
 // event if the runner instance disappears. Hence it will delete the exec_info
 // in any case, thus preventing memory leaks.
 
-void runner::run(const impl::context_ptr& ctx_)
+void runner::run(impl::context_ptr ctx_)
 {
-  ctx_->m_self = ctx_; // keeps self alive while in the task queue
-
-  ::dispatch_async_f(m_queue, ctx_.get(), task_executor);
+  ::dispatch_async_f(m_queue, ctx_, task_executor);
 }
 
 // executor for task::run()
 void runner::task_executor(void* ctx_)
 {
-  auto aux = static_cast<impl::context*>(ctx_);
-  auto ctx = std::move(aux->m_self);
-  auto r = ctx->m_runner.lock();
+  auto ctx = static_cast<impl::context_ptr>(ctx_);
 
+  auto r = ctx->m_info->m_runner.lock();
   if (r)
-  {
-    ctx->m_ctx.simple()->entry_point()(r, ctx);
-  }
+    ctx->m_ctx.simple().entry_point()(r, ctx);
+
+  delete ctx;
 }
   
 
