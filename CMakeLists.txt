@@ -152,6 +152,10 @@ set (COOL_IMPL_HEADERS
     ${COOL_HOME}/include/cool2/impl/platform.h
     ${COOL_HOME}/include/cool2/impl/traits.h
     ${COOL_HOME}/include/cool2/async/impl/task.h
+    ${COOL_HOME}/include/cool2/async/impl/runner.h
+)
+
+set (COOL_ENTRAILS_HEADERS
     ${COOL_HOME}/impl/include/entrails/runner.h
     ${COOL_HOME}/impl/include/entrails/${COOL_ASYNC_PLATFORM}/runner.h
     #-- old stuff
@@ -164,12 +168,13 @@ if (OSX OR LINUX)
   set (COOL_IMPL_HEADERS ${COOL_IMPL_HEADERS} ${COOL_HOME}/include/cool/entrails/ip_address.h)
 endif()
 
-source_group("Api Header Files" FILES ${COOL_HEADERS})
-source_group("Impl Header Files" FILES ${COOL_IMPL_HEADERS})
-source_group("Impl Source Files" FILES ${COOL_SRCS})
+source_group ("Api Header Files" FILES ${COOL_HEADERS})
+source_group ("Impl Header Files" FILES ${COOL_IMPL_HEADERS})
+source_group ("Entrails Header Files" FILES ${COOL_ENTRAILS_HEADERS})
+source_group ("Impl Source Files" FILES ${COOL_SRCS})
 
 # -- dynamic library
-add_library (${COOL_DYNAMIC_LIBRARY_NAME} SHARED ${COOL_SRCS} ${COOL_HEADERS} ${COOL_IMPL_HEADERS})
+add_library (${COOL_DYNAMIC_LIBRARY_NAME} SHARED ${COOL_SRCS} ${COOL_HEADERS} ${COOL_IMPL_HEADERS} ${COOL_ENTRAILS_HEADERS})
 set_target_properties (${COOL_DYNAMIC_LIBRARY_NAME} PROPERTIES
     COMPILE_DEFINITIONS "${TARGET};COOL_BUILD;${COOL_ASYNC_PLATFORM_DEFINE}"
     OUTPUT_NAME ${COOL_NAME}
@@ -189,7 +194,7 @@ target_link_libraries (${COOL_DYNAMIC_LIBRARY_NAME} ${COOL_LINK_LIBRARIES})
 target_include_directories (${COOL_DYNAMIC_LIBRARY_NAME} PRIVATE ${COOL_HOME}/impl/include)
 
 # -- static library
-add_library(${COOL_STATIC_LIBRARY_NAME} STATIC ${COOL_SRCS} ${COOL_HEADERS} ${COOL_IMPL_HEADERS})
+add_library(${COOL_STATIC_LIBRARY_NAME} STATIC ${COOL_SRCS} ${COOL_HEADERS} ${COOL_IMPL_HEADERS} ${COOL_ENTRAILS_HEADERS})
 set_target_properties(${COOL_STATIC_LIBRARY_NAME} PROPERTIES
   COMPILE_DEFINITIONS "COOL_STATIC;${TARGET};COOL_BUILD;${COOL_ASYNC_PLATFORM_DEFINE}"
   OUTPUT_NAME ${COOL_NAME}

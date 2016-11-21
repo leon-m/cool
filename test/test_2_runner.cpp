@@ -264,6 +264,39 @@ TEST(runner, sequence_of_tasks)
     EXPECT_EQ(6, step);
   }
 }
+
+TEST(runner, sequential_tasks)
+{
+  auto r = std::make_shared<runner>(RunPolicy::SEQUENTIAL);
+
+  {
+    cool::basis::vow<std::string> v_;
+    auto a_ = v_.get_aim();
+
+    auto t1 = taskop::create(
+        r
+      , [] (const runner::ptr&, int n)
+        {
+          return std::to_string(n);
+        }
+    );
+    auto t2 = taskop::create(
+        r
+      , [&v_](const runner::ptr&, const std::string arg)
+        {
+          v_.set(arg);
+        }
+    );
+
+    auto t = taskop::sequential(r, t1, t2);
+//    t.run(42);
+
+    std::string res;
+    EXPECT_NO_THROW(res = a_.get(ms(100)));
+    EXPECT_EQ("84", res);
+  }
+
+}
 // --------------------------------------------------------------------------
 //
 //
@@ -457,12 +490,11 @@ TEST(task, basic_compile_parallel)
 TEST(task, basic_compile_sequential)
 {
   auto r = std::make_shared<my_runner>();
-
   {
     auto t = taskop::create(r, &v_f);
     auto y = taskop::create(r, &d_f);
 
-    auto c = taskop::sequential(t, y);
+    auto c = taskop::sequential(r, t, y);
     IS_PAR_TYPE(void, c);
     IS_RET_TYPE(double, c);
   }
@@ -478,7 +510,7 @@ TEST(task, basic_compile_sequential)
     auto t = taskop::create(r, &d_f_d);
     auto y = taskop::create(r, &v_f_d);
 
-    auto c = taskop::sequential(t, y);
+    auto c = taskop::sequential(r, t, y);
     IS_PAR_TYPE(double, c);
     IS_RET_TYPE(void, c);
   }

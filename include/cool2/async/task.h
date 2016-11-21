@@ -295,11 +295,13 @@ class task
     if (m_impl == nullptr)
       throw exception::illegal_state("this task object is not valid");
 
-    entrails::kick(impl::task_factory<ResultT, ParamT, TagT>::make_context(m_impl, param_));
+    entrails::kick(impl::task_factory<ResultT, ParamT, TagT>::create_context(m_impl, param_));
   }
 
  private:
   friend class taskop;
+  template <typename A, typename B, typename C>
+  friend class impl::task_factory;
   task(const impl::taskinfo_ptr& arg_) : m_impl(arg_)
   { /* noop */ }
 
@@ -341,11 +343,13 @@ class task<TagT, ResultT, void>
 
   void run()
   {
-    entrails::kick(impl::task_factory<ResultT, void, TagT>::make_context(m_impl));
+    entrails::kick(impl::task_factory<ResultT, void, TagT>::create_context(m_impl));
   }
 
  private:
   friend class taskop;
+  template <typename A, typename B, typename C>
+  friend class impl::task_factory;
   task(const impl::taskinfo_ptr& arg_) : m_impl(arg_)
   { /* noop */ }
 
@@ -515,7 +519,7 @@ class taskop
   static task<impl::tag::serial
             , typename impl::traits::sequence_result<TaskT...>::type
             , typename impl::traits::first_task<TaskT...>::type::parameter_t>
-  sequential(TaskT&&... t_)
+  sequential(const runner::weak_ptr& r_, TaskT&&... t_)
   {
     using result_t = typename impl::traits::sequence_result<TaskT...>::type;
     using param_t = typename impl::traits::first_task<TaskT...>::type::parameter_t;
@@ -524,7 +528,7 @@ class taskop
         impl::traits::all_chained<typename std::decay<TaskT>::type...>::result::value
       , "The type of the parameter of each task in the sequence must match the return type of the preceding task.");
     return task<impl::tag::serial, result_t, param_t>(
-        impl::task_factory<result_t, param_t, impl::tag::serial>::create(t_.m_impl...));
+        impl::task_factory<result_t, param_t, impl::tag::serial>::create(r_, std::forward<TaskT>(t_)...));
   }
   /**
    * Add an exception handler(s) to the task.
@@ -603,7 +607,7 @@ inline task<impl::tag::serial
           , ParameterT>
 task<TagT, ResultT, ParameterT>::sequential(TaskT&&... tasks)
 {
-  return taskop::sequential(*this, std::forward<TaskT>(tasks)...);
+  return taskop::sequential(m_impl->get_runner(), *this, std::forward<TaskT>(tasks)...);
 }
 #if 0
 // ---- implementation of task methods for void partial specialization
@@ -641,7 +645,7 @@ inline task<impl::tag::serial
           , void>
 task<TagT, ResultT, void>::sequential(TaskT&&... tasks)
 {
-  return taskop::sequential(*this, std::forward<TaskT>(tasks)...);
+  return taskop::sequential(m_impl->get_runner(), *this, std::forward<TaskT>(tasks)...);
 }
 } } // namespace
 

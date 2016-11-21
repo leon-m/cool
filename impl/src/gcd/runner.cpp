@@ -20,6 +20,7 @@
  */
 
 #include "cool2/async.h"
+#include "cool2/async/impl/runner.h"
 #include "cool/exception.h"
 #include "entrails/gcd/runner.h"
 
@@ -69,27 +70,21 @@ void runner::stop()
   }
 }
 
-// ----
-// NOTE: run() allocates new exec_info token which address is sent via task queue
-// as a user data to task_executor. Task executor is a static method, available
-// event if the runner instance disappears. Hence it will delete the exec_info
-// in any case, thus preventing memory leaks.
-
-void runner::run(impl::context_ptr ctx_)
+void runner::run(cool::async::impl::execution_context* ctx_)
 {
   ::dispatch_async_f(m_queue, ctx_, task_executor);
 }
 
 // executor for task::run()
-void runner::task_executor(void* ctx_)
+void runner::task_executor(void* arg_)
 {
-  auto ctx = static_cast<impl::context_ptr>(ctx_);
+  auto ctx = static_cast<cool::async::impl::execution_context*>(arg_);
 
-  auto r = ctx->m_info->m_runner.lock();
+  auto r = ctx->get_runner().lock();
   if (r)
-    ctx->m_ctx.simple().entry_point()(r, ctx);
-
-  delete ctx;
+    ctx->get_entry_point()(r, ctx);
+  else
+    delete ctx;
 }
   
 

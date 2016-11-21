@@ -19,11 +19,12 @@
  * IN THE SOFTWARE.
  */
 #include "cool/exception.h"
+#include "cool2/async/impl/runner.h"
 #include "entrails/winwtp/runner.h"
 
 namespace cool { namespace async { namespace entrails {
 
-constexpr const int TASK = 1;
+/*constexpr*/ const int TASK = 1;
 
 class poolmgr
 {
@@ -136,16 +137,18 @@ void runner::task_executor()
   if (cmd != TASK)
     return;
 
-  auto ctx = reinterpret_cast<impl::context*>(aux);
-  auto r = ctx->m_info->m_runner.lock();
+  auto ctx = reinterpret_cast<cool::async::impl::execution_context*>(aux);
+  auto r = ctx->get_runner().lock();
 
   if (r)
-    ctx->m_ctx.simple().entry_point()(r, ctx);
+    ctx->get_entry_point()(r, ctx);
+  else
+    delete ctx;
 
   start_work();
 }
 
-void runner::run(impl::context_ptr ctx_)
+void runner::run(cool::async::impl::execution_context* ctx_)
 {
   PostQueuedCompletionStatus(m_fifo, TASK, NULL, reinterpret_cast<LPOVERLAPPED>(ctx_));
 
