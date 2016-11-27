@@ -27,10 +27,12 @@
 
 namespace cool { namespace async {
 
+#if 0
 class runner;
-
+#endif
 namespace impl {
 
+#if 0
 class execution_context
 {
  public:
@@ -75,7 +77,7 @@ class execution_context
   void*                 m_res_reporter;   // pointer to result reporter function
   generic_deleter       m_res_deleter;    // deleter for result reporter function
 };
-
+#endif
 } } } // namespace
 
 #endif

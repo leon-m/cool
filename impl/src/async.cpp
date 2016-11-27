@@ -41,12 +41,7 @@ const std::string& runner::name() const
   return m_impl->name();
 }
 
-const std::shared_ptr<entrails::runner> runner::impl() const
-{
-  return m_impl;
-}
-
-std::shared_ptr<entrails::runner> runner::impl()
+const std::shared_ptr<entrails::runner>& runner::impl() const
 {
   return m_impl;
 }
@@ -64,10 +59,10 @@ void runner::stop()
 namespace entrails
 {
 
-void kick(const impl::context_ptr& ctx_)
+void kick(impl::context* ctx_)
 {
   if (!ctx_)
-    throw cool::exception::illegal_state("this task object is in undefined state");
+    throw cool::exception::illegal_state("this task object is in undefined state with null context");
 
   auto aux = ctx_->get_runner().lock();
   if (!aux)

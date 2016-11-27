@@ -69,13 +69,13 @@ TEST(traits, function_traits)
 template <typename T>
 struct A
 {
-  using result_t = T;
+  using result_type = T;
 };
 template <typename T, typename Y>
 struct C
 {
-  using result_t = T;
-  using parameter_t = Y;
+  using result_type = T;
+  using input_type = Y;
 };
 
 TEST(traits, parallel_deduction)
@@ -144,12 +144,14 @@ TEST(traits, chained)
 //
 //
 struct my_runner : public runner
-{ };
+{
+  using ptr = std::shared_ptr<my_runner>;
+};
 
 TEST(runner, basic)
 {
   const std::string base = "si.digiverse.cool2.runner";
-  runner r;
+  my_runner r;
   EXPECT_EQ(base, r.name().substr(0,base.length()));
 }
 
@@ -162,9 +164,9 @@ TEST(runner, basic_task_non_void_non_void)
 		cool::basis::vow<void> v_;
 		auto a_ = v_.get_aim();
 
-		auto t = taskop::create(
+		auto t = factory::create(
 			r
-			, [&v_](const runner::ptr& r_, int n_)
+			, [&v_](const my_runner::ptr& r_, int n_)
 		{
 			v_.set();
 			return std::to_string(n_);
@@ -179,7 +181,7 @@ TEST(runner, basic_task_non_void_non_void)
 		cool::basis::vow<void> v_;
 		auto a_ = v_.get_aim();
 
-		auto t = taskop::create(r, [&v_](const runner::ptr& r_) -> int { v_.set(); return 5; });
+		auto t = factory::create(r, [&v_](const my_runner::ptr& r_) -> int { v_.set(); return 5; });
 		t.run();
 
 		EXPECT_NO_THROW(a_.get(ms(100)));
@@ -190,7 +192,7 @@ TEST(runner, basic_task_non_void_non_void)
 		cool::basis::vow<void> v_;
 		auto a_ = v_.get_aim();
 
-		auto t = taskop::create(r, [&v_](const runner::ptr& r_, int n_) -> void { v_.set(); });
+		auto t = factory::create(r, [&v_](const my_runner::ptr& r_, int n_) -> void { v_.set(); });
 		t.run(42);
 
 		EXPECT_NO_THROW(a_.get(ms(100)));
@@ -200,9 +202,9 @@ TEST(runner, basic_task_non_void_non_void)
 		cool::basis::vow<void> v_;
 		auto a_ = v_.get_aim();
 
-		auto t = taskop::create(
+		auto t = factory::create(
 			r
-			, [&v_](const runner::ptr& r_) -> void
+			, [&v_](const my_runner::ptr& r_) -> void
 		{
 			v_.set();
 		}
@@ -211,7 +213,7 @@ TEST(runner, basic_task_non_void_non_void)
 		EXPECT_NO_THROW(a_.get(ms(100)));
 	}
 }
-
+#if 0
 TEST(runner, sequence_of_tasks)
 {
   {
@@ -219,7 +221,7 @@ TEST(runner, sequence_of_tasks)
     cool::basis::vow<void> v_;
     auto a_ = v_.get_aim();
     int step = 0;
-    taskop::create(r,
+    factory::create(r,
       [&step] (const runner::ptr& r_)
       {
         step = 1;
@@ -231,28 +233,28 @@ TEST(runner, sequence_of_tasks)
     // the second task will make sure that the first completed the 200ms
     // wait (step value 2) and move the step to 3 if it did .. .and repeat
     // this several times to add more tasks into the queue
-    taskop::create(r,
+    factory::create(r,
       [&v_, &step] (const runner::ptr& r_)
       {
         if (step == 2)
           step = 3;
       }
     ).run();
-    taskop::create(r,
+    factory::create(r,
       [&v_, &step] (const runner::ptr& r_)
       {
         if (step == 3)
           step = 4;
       }
     ).run();
-    taskop::create(r,
+    factory::create(r,
       [&v_, &step] (const runner::ptr& r_)
       {
         if (step == 4)
           step = 5;
       }
     ).run();
-    taskop::create(r,
+    factory::create(r,
       [&v_, &step] (const runner::ptr& r_)
       {
         if (step == 5)
@@ -273,14 +275,14 @@ TEST(runner, sequential_tasks)
     cool::basis::vow<std::string> v_;
     auto a_ = v_.get_aim();
 
-    auto t1 = taskop::create(
+    auto t1 = factory::create(
         r
       , [] (const runner::ptr&, int n)
         {
           return std::to_string(n);
         }
     );
-    auto t2 = taskop::create(
+    auto t2 = factory::create(
         r
       , [&v_](const runner::ptr&, const std::string arg)
         {
@@ -288,7 +290,7 @@ TEST(runner, sequential_tasks)
         }
     );
 
-    auto t = taskop::sequential(r, t1, t2);
+    auto t = factory::sequential(r, t1, t2);
 //    t.run(42);
 
     std::string res;
@@ -297,6 +299,7 @@ TEST(runner, sequential_tasks)
   }
 
 }
+#endif
 // --------------------------------------------------------------------------
 //
 //
@@ -321,10 +324,10 @@ struct c_void     { void operator ()(const runner::ptr& r) { } };
 
 #define IS_RET_TYPE(type_, task_) \
    EXPECT_EQ(std::string(typeid(type_).name()), \
-             std::string(typeid(decltype(task_)::result_t).name()))
+             std::string(typeid(decltype(task_)::result_type).name()))
 #define IS_PAR_TYPE(type_, task_) \
    EXPECT_EQ(std::string(typeid(type_).name()), \
-             std::string(typeid(decltype(task_)::parameter_t).name()))
+             std::string(typeid(decltype(task_)::input_type).name()))
 
 // This tests si basically compilation test to see whether the stuff compiles
 // with different Callable types
@@ -335,8 +338,8 @@ TEST(task, basic_compile_task)
 #if 1
   // lambdas
   {
-    auto t = taskop::create(r, [] (const runner::ptr& r, int n) { return 3; });
-    auto y = taskop::create(r, [] (const runner::ptr& r, int n) {  });
+    auto t = factory::create(r, [] (const runner::ptr& r, int n) { return 3; });
+    auto y = factory::create(r, [] (const runner::ptr& r, int n) {  });
     IS_RET_TYPE(int, t);
     IS_RET_TYPE(void, y);
     IS_PAR_TYPE(int, t);
@@ -349,8 +352,8 @@ TEST(task, basic_compile_task)
     std::function<double(const runner::ptr&, double)> f1 = [] (const runner::ptr& r, double n) { return 3; };
     std::function<void(const runner::ptr&, double)> f2 = [] (const runner::ptr& r, double n) { };
 
-    auto t = taskop::create(r, f1);
-    auto y = taskop::create(r, f2);
+    auto t = factory::create(r, f1);
+    auto y = factory::create(r, f2);
     IS_RET_TYPE(double, t);
     IS_RET_TYPE(void, y);
     IS_PAR_TYPE(double, t);
@@ -367,8 +370,8 @@ TEST(task, basic_compile_task)
 #if 1
   // functor
   {
-    auto t = taskop::create(r, c_int_int());
-    auto y = taskop::create(r, c_void_int());
+    auto t = factory::create(r, c_int_int());
+    auto y = factory::create(r, c_void_int());
     IS_RET_TYPE(int, t);
     IS_RET_TYPE(void, y);
     IS_PAR_TYPE(int, t);
@@ -378,8 +381,8 @@ TEST(task, basic_compile_task)
 #if 1
   // function pointers
   {
-    auto t = taskop::create(r, &d_f_d);
-    auto y = taskop::create(r, &v_f_d);
+    auto t = factory::create(r, &d_f_d);
+    auto y = factory::create(r, &v_f_d);
     IS_RET_TYPE(double, t);
     IS_RET_TYPE(void, y);
     IS_PAR_TYPE(double, t);
@@ -390,8 +393,8 @@ TEST(task, basic_compile_task)
   // lambdas
 #if 1
   {
-    auto t = taskop::create(r, [] (const runner::ptr& r) { return 3; });
-    auto y = taskop::create(r, [] (const runner::ptr& r) {  });
+    auto t = factory::create(r, [] (const runner::ptr& r) { return 3; });
+    auto y = factory::create(r, [] (const runner::ptr& r) {  });
     IS_RET_TYPE(int, t);
     IS_RET_TYPE(void, y);
     IS_PAR_TYPE(void, t);
@@ -404,8 +407,8 @@ TEST(task, basic_compile_task)
     std::function<double(const runner::ptr&)> f1 = [] (const runner::ptr& r) { return 3; };
     std::function<void(const runner::ptr&)> f2 = [] (const runner::ptr& r) { };
 
-    auto t = taskop::create(r, f1);
-    auto y = taskop::create(r, f2);
+    auto t = factory::create(r, f1);
+    auto y = factory::create(r, f2);
     IS_RET_TYPE(double, t);
     IS_RET_TYPE(void, y);
     IS_PAR_TYPE(void, t);
@@ -422,8 +425,8 @@ TEST(task, basic_compile_task)
   // functor
 #if 1
   {
-    auto t = taskop::create(r, c_int());
-    auto y = taskop::create(r, c_void());
+    auto t = factory::create(r, c_int());
+    auto y = factory::create(r, c_void());
     IS_RET_TYPE(int, t);
     IS_RET_TYPE(void, y);
     IS_PAR_TYPE(void, t);
@@ -433,8 +436,8 @@ TEST(task, basic_compile_task)
 #if 1
   // function pointers
   {
-    auto t = taskop::create(r, &d_f);
-    auto y = taskop::create(r, &v_f);
+    auto t = factory::create(r, &d_f);
+    auto y = factory::create(r, &v_f);
     IS_RET_TYPE(double, t);
     IS_RET_TYPE(void, y);
     IS_PAR_TYPE(void, t);
@@ -486,43 +489,43 @@ TEST(task, basic_compile_parallel)
   }
 #endif
 }
-
 TEST(task, basic_compile_sequential)
 {
   auto r = std::make_shared<my_runner>();
   {
-    auto t = taskop::create(r, &v_f);
-    auto y = taskop::create(r, &d_f);
+    auto t = factory::create(r, &v_f);
+    auto y = factory::create(r, &d_f);
 
-    auto c = taskop::sequential(r, t, y);
+    auto c = factory::sequential(r, t, y);
     IS_PAR_TYPE(void, c);
     IS_RET_TYPE(double, c);
   }
   {
-    auto t = taskop::create(r, &v_f);
-    auto y = taskop::create(r, &d_f);
+    auto t = factory::create(r, &v_f);
+    auto y = factory::create(r, &d_f);
 
-    auto c = t.sequential(y);
+    auto c = factory::sequential(r, t, y);
     IS_PAR_TYPE(void, c);
     IS_RET_TYPE(double, c);
   }
   {
-    auto t = taskop::create(r, &d_f_d);
-    auto y = taskop::create(r, &v_f_d);
+    auto t = factory::create(r, &d_f_d);
+    auto y = factory::create(r, &v_f_d);
 
-    auto c = taskop::sequential(r, t, y);
+    auto c = factory::sequential(r, t, y);
     IS_PAR_TYPE(double, c);
     IS_RET_TYPE(void, c);
   }
   {
-    auto t = taskop::create(r, &d_f_d);
-    auto y = taskop::create(r, &v_f_d);
+    auto t = factory::create(r, &d_f_d);
+    auto y = factory::create(r, &v_f_d);
 
-    auto c = t.sequential(y);
+    auto c = factory::sequential(r, t, y);
     IS_PAR_TYPE(double, c);
     IS_RET_TYPE(void, c);
   }
 }
+
 
 TEST(task, parallel_return_value)
 {
@@ -548,5 +551,6 @@ TEST(task, parallel_return_value)
   EXPECT_NO_THROW(a_.get(ms(100)));
 #endif
 }
+
 
 

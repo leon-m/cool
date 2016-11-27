@@ -139,9 +139,9 @@ struct parallel_result
 {
   using type = std::tuple<
       typename std::conditional<
-          std::is_same<typename std::decay<typename std::decay<Args>::type::result_t>::type, void>::value
+          std::is_same<typename std::decay<typename std::decay<Args>::type::result_type>::type, void>::value
         , void*
-        , typename std::remove_reference<Args>::type::result_t>::type...
+        , typename std::remove_reference<Args>::type::result_type>::type...
       >;
 };
   
@@ -150,7 +150,7 @@ struct parallel_result
 template <typename... Args>
 class sequence_result
 {
-  using sequence = std::tuple<typename std::decay<Args>::type::result_t...>;
+  using sequence = std::tuple<typename std::decay<Args>::type::result_type...>;
 
  public:
   using type = typename std::tuple_element<std::tuple_size<sequence>::value - 1, sequence>::type;
@@ -206,8 +206,35 @@ struct all_chained
 template <typename T, typename Y>
 struct all_chained<T, Y>
 {
-  using result = std::integral_constant<bool, std::is_same<typename std::decay<typename T::result_t>::type, typename std::decay<typename Y::parameter_t>::type>::value>;
+  using result = std::integral_constant<bool, std::is_same<typename std::decay<typename T::result_type>::type, typename std::decay<typename Y::input_type>::type>::value>;
 };
+
+// ---------
+// Misc utility traits:
+// - unbound_type: calculates function signature depending on whether it has input param or not
+// - result_reporter: calculates result reported signature depending on whether user lamda returns value or not
+template <typename RunT, typename InpT, typename RetT>
+struct unbound_type
+{
+  using type = std::function<RetT(const std::shared_ptr<RunT>&, const InpT&)>;
+};
+template <typename RunT, typename RetT>
+struct unbound_type<RunT, void, RetT>
+{
+  using type = std::function<RetT(const std::shared_ptr<RunT>&)>;
+};
+// ---
+template <typename RetT>
+struct result_reporter
+{
+  using type = std::function<void(const RetT&)>;
+};
+template <>
+struct result_reporter<void>
+{
+  using type = std::function<void()>;
+};
+
 
 } } } } // namespace
 
