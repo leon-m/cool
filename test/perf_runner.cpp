@@ -13,7 +13,7 @@ using namespace cool::basis;
 void big_test()
 {
   auto r = std::make_shared<cool::async::runner>();
-  std::vector<cool::async::task<cool::async::impl::tag::simple, void, void>> tasks;
+  std::vector<cool::async::task<cool::async::impl::tag::simple, cool::async::runner, void, void>> tasks;
   const uint64_t ntasks = 2000000;
   vow<void> v_;
   auto a_ = v_.get_aim();
@@ -22,18 +22,18 @@ void big_test()
 
   for (int i = 0; i < ntasks; ++i)
     tasks.push_back(
-      cool::async::taskop::create(
+      cool::async::factory::create(
           r
-        , [i, &step] (const cool::async::runner::ptr&)
+        , [i, &step] (const std::shared_ptr<cool::async::runner>&)
           {
            if (i == step)
              ++step;
           }
       ));
   tasks.push_back(
-    cool::async::taskop::create(
+    cool::async::factory::create(
         r
-      , [&v_] (const cool::async::runner::ptr&)
+      , [&v_] (const std::shared_ptr<cool::async::runner>&)
         {
           v_.set();
         }

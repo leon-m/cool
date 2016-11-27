@@ -26,7 +26,7 @@
 #include <string>
 
 #include "cool2/impl/platform.h"
-
+#include "cool/exception.h"
 
 namespace cool { namespace async {
 
@@ -51,6 +51,99 @@ namespace entrails { class runner; }
  * from its task queue concurrently.
  */
 enum class RunPolicy { SEQUENTIAL, CONCURRENT };
+
+class runner
+{
+ public:
+  using ptr = std::shared_ptr<runner>;
+  using weak_ptr = std::weak_ptr<runner>;
+
+ public:
+  runner(runner&&) = delete;
+  runner& operator=(runner&&) = delete;
+  /**
+   * Construct a new runner object.
+   *
+   * Constructs a new runner object, optionally with the desired task 
+   * scheduling policy.
+   *
+   * @param policy_ optional parameter, set to RunPolicy::SEQUENTIAL by default.
+   *
+   * @exception cool::exception::create_failure thrown if a new instance cannot
+   *   be created.
+   *
+   * @note The runner object is created in started state and is immediately
+   *   capable of executing tasks.
+   */
+  dlldecl runner(RunPolicy policy_ = RunPolicy::SEQUENTIAL);
+
+  /**
+   * Copy constructor.
+   *
+   * Constructs a copy of a runner objects. Note that a newly construted runner
+   * is considered to be a @em clone of the original object. Both runner objects
+   * share the same internal task queue.
+   */
+  dlldecl runner(const runner&) = default;
+  /**
+   * Copy assignment operator.
+   *
+   * The left-hand side runer object will drop the reference to the current
+   * internal task queue and receive the reference to the internal task queue
+   * of the right-hand side runner object. The previous task queue of the
+   * assignee may get destryoed, depending on whether there is another runner object
+   * keeping a reference to it and on the platforms task queue destruction
+   * strategy.
+   */
+  dlldecl runner& operator=(const runner&) = default;
+
+  /**
+   * Destroys the runner object.
+   *
+   * Destroying the runner object means dropping a reference to its internal
+   * task queue. If this was the only reference to the task queue, the task
+   * queue will begin its destruction cycle, but, depending on the platform,
+   * may not be destroyed immediatelly. Some platforms will destroy the task
+   * queue only after the last task from the queue was run.
+   */
+  dlldecl virtual ~runner();
+
+  /**
+   * Return the name of this runner.
+   *
+   * Every runner object has a process level unique name.
+   */
+  dlldecl const std::string& name() const;
+  /**
+   * Stop executing the tasks from this runner's queue.
+   *
+   * Currently executing tasks from this runner queue are executed to their
+   * completion but new tasks are no longer scheduled for execution.
+   * Note that suspending the execution will affect all clones that share the
+   * same task queue.
+   */
+  dlldecl void stop();
+  /**
+   * Resume execution of tasks from this runner's queue.
+   *
+   * Note that resuming the execution will affect all clones that share the
+   * same task queue.
+   */
+  dlldecl void start();
+  /**
+   * Return task queue implementation
+   *
+   * Returns a reference to the internal task queue implementation. Portable
+   * applications should avoid using the internal implementation directly.
+   */
+  const std::shared_ptr<entrails::runner>& impl() const;
+
+ private:
+  std::shared_ptr<entrails::runner> m_impl;
+};
+
+
+#if 0
 
 /**
  * A representation of the queue of asynchronously executing tasks.
@@ -204,7 +297,7 @@ class runner
  private:
   std::shared_ptr<entrails::runner> m_impl;
 };
-
+#endif
 
 } } // namespace
 

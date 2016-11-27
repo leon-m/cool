@@ -33,12 +33,111 @@
 
 namespace cool { namespace async {
 
-namespace entrails { void kick(const impl::context_ptr&); }
-
+using impl::internal_exception;
+using impl::bad_runner_cast;
 using impl::runner_not_available;
+class factory;
 
-class taskop;
 
+
+template <typename TagT, typename RunnerT, typename InputT, typename ResultT, typename... TaskT>
+class task
+{
+ public:
+  using this_type   = task;
+  using runner_type = RunnerT;
+  using tag_type    = TagT;
+  using input_type  = InputT;
+  using result_type = ResultT;
+  using impl_type   = impl::task<tag_type, runner_type, input_type, result_type, typename std::decay<TaskT>::type::impl_type...>;
+
+ public:
+  template <typename T = InputT>
+  void run(const typename std::enable_if<!std::is_same<T, void>::value, T>::type& i_)
+  {
+    m_impl->run(m_impl, i_);
+  }
+
+  template <typename T = InputT>
+  typename std::enable_if<std::is_same<T, void>::value, void>::type run()
+  {
+    m_impl->run(m_impl);
+  }
+
+ private:
+  friend class factory;
+  task(const std::shared_ptr<impl_type> impl_) : m_impl(impl_)
+  { /* noop */ }
+
+ private:
+  std::shared_ptr<impl_type> m_impl;
+};
+
+class factory
+{
+ public:
+  template <typename RunnerT, typename CallableT>
+  inline static task<
+      impl::tag::simple
+    , RunnerT
+    , typename impl::traits::arg_type<1, CallableT>::type
+    , typename impl::traits::function_traits<CallableT>::result_type
+  > create(const std::weak_ptr<RunnerT>& r_, const CallableT& f_)
+  {
+    using result_type = typename impl::traits::function_traits<CallableT>::result_type;
+    using input_type = typename impl::traits::arg_type<1, CallableT>::type;
+    using task_type = task<impl::tag::simple, RunnerT, input_type, result_type>;
+
+    return task_type(std::make_shared<typename task_type::impl_type>(r_, f_));
+  }
+  template <typename RunnerT, typename CallableT>
+  inline static task<
+      impl::tag::simple
+    , RunnerT
+    , typename impl::traits::arg_type<1, CallableT>::type
+    , typename impl::traits::function_traits<CallableT>::result_type
+  > create(const std::shared_ptr<RunnerT>& r_, const CallableT& f_)
+  {
+    return factory::create(std::weak_ptr<RunnerT>(r_), f_);
+  }
+
+  template <typename RunnerT, typename... TaskT>
+  inline static task<
+      impl::tag::serial
+    , RunnerT
+    , typename impl::traits::first_task<TaskT...>::type::input_type
+    , typename impl::traits::sequence_result<TaskT...>::type
+    , typename std::decay<TaskT>::type ...>
+  sequential(const std::weak_ptr<RunnerT>& r_, TaskT&&... t_)
+  {
+    using result_type = typename impl::traits::sequence_result<TaskT...>::type;
+    using input_type = typename impl::traits::first_task<TaskT...>::type::input_type;
+    using task_type = task<impl::tag::serial, RunnerT, input_type, result_type, typename std::decay<TaskT>::type...>;
+
+    static_assert(
+        impl::traits::all_chained<typename std::decay<TaskT>::type...>::result::value
+      , "The type of the parameter of each task in the sequence must match the return type of the preceding task.");
+
+    return task_type(std::make_shared<typename task_type::impl_type>(r_, t_.m_impl...));
+  }
+
+  template <typename RunnerT, typename... TaskT>
+  inline static task<
+      impl::tag::serial
+    , RunnerT
+    , typename impl::traits::first_task<TaskT...>::type::input_type
+    , typename impl::traits::sequence_result<TaskT...>::type
+    , typename std::decay<TaskT>::type...>
+  sequential(const std::shared_ptr<RunnerT>& r_, TaskT&&... t_)
+  {
+    return sequential(std::weak_ptr<RunnerT>(r_), std::forward<TaskT>(t_)...);
+
+  }
+
+};
+
+
+#if 0
 /**
  * A class template representing the basic objects that can be scheduled for execution
  * by one of the @ref runner "runners".
@@ -647,6 +746,7 @@ task<TagT, ResultT, void>::sequential(TaskT&&... tasks)
 {
   return taskop::sequential(m_impl->get_runner(), *this, std::forward<TaskT>(tasks)...);
 }
+#endif
 } } // namespace
 
 #endif

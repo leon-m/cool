@@ -31,17 +31,286 @@
 
 namespace cool { namespace async {
 
+// forward declarations magic
+namespace impl { class context; }
+namespace entrails { void kick(impl::context* ctx_); }
+
 namespace impl {
 
-class runner_not_available : public cool::exception::runtime_exception
+class internal_exception : public cool::exception::runtime_exception
+{
+public:
+  internal_exception(const std::string& msg_) : runtime_exception(msg_)
+  { /* noop */ }
+};
+
+class bad_runner_cast : public internal_exception
+{
+public:
+  bad_runner_cast()
+    : internal_exception("dynamic_pointer_cast to RunnerT type unexpectedly failed")
+  { /* noop */ }
+};
+
+class runner_not_available : public internal_exception
 {
  public:
   runner_not_available()
-    : runtime_exception("the destination runner not available")
+    : internal_exception("the destination runner not available")
   { /* noop */ }
 };
   
+namespace tag
+{
+struct simple    { };
+struct serial    { };
+struct parallel  { };
+struct intercept { };
+} // namespace
 
+class context
+{
+ public:
+  virtual ~context() { /* noop */ }
+
+  virtual std::weak_ptr<async::runner> get_runner() = 0;
+  virtual void entry_point(const std::shared_ptr<async::runner>&, context*) = 0;
+};
+
+// ---------------------------------------------------------------------------
+// ----- Task implementation
+// -----
+// ----- impl::task carries static task information with the methods to create
+// ----- execution contexts
+// ---------------------------------------------------------------------------
+template <typename TagT, typename RunnerT, typename InputT, typename ResultT, typename... TaskT>
+class task { };
+
+template <typename RunnerT, typename InputT, typename ResultT>
+class task<tag::simple, RunnerT, InputT, ResultT>
+{
+ public:
+  using this_type        = task;
+  using this_runner_type = RunnerT;
+  using tag_type         = tag::simple;
+  using unbound_type     = typename traits::unbound_type<RunnerT, InputT, ResultT>::type;
+
+ public:
+  inline explicit task(const std::weak_ptr<this_runner_type>& r_, const unbound_type& f_)
+    : m_runner(r_), m_unbound(f_)
+  { /* noop */ }
+
+  template <typename T = InputT>
+  void run(const std::shared_ptr<this_type>& self_, const typename std::enable_if<!std::is_same<T, void>::value, T>::type& i_);
+  void run(const std::shared_ptr<this_type>& self_);
+
+  inline std::weak_ptr<this_runner_type> get_runner() const
+  {
+    return m_runner;
+  }
+
+  inline unbound_type& user_callable()
+  {
+    return m_unbound;
+  }
+ private:
+  std::weak_ptr<this_runner_type> m_runner;
+  unbound_type                    m_unbound;
+};
+
+template <typename RunnerT, typename InputT, typename ResultT, typename... TaskT>
+class task<tag::serial, RunnerT, InputT, ResultT, TaskT...>
+{
+ public:
+  using this_type        = task;
+  using this_runner_type = RunnerT;
+  using tag_type         = tag::simple;
+
+  template <typename T = InputT>
+  void run(const std::shared_ptr<this_type>& self_, const typename std::enable_if<!std::is_same<T, void>::value, T>::type& i_);
+  void run(const std::shared_ptr<this_type>& self_);
+
+  explicit inline task(const std::weak_ptr<RunnerT>& r_, const std::shared_ptr<TaskT>&... tp_)
+     : m_runner(r_)
+  {
+    m_tasks = std::make_tuple(tp_...);
+  }
+
+ private:
+  std::weak_ptr<this_runner_type> m_runner;
+  std::tuple<std::shared_ptr<TaskT>...> m_tasks;
+
+};
+
+
+// ---------------------------------------------------------------------------
+// ----- Execution contexts implementation
+// -----
+// -----
+// -----
+// ---------------------------------------------------------------------------
+namespace exec
+{
+// value container that can hold even "values" of void type
+template <typename ResultT>
+struct container
+{
+  inline container(const ResultT& r_) : value(r_) { /* noop */ }
+  ResultT value;
+};
+
+template <>
+struct container<void>
+{
+};
+// a little helper to avoid specializing entire context for void ResultT
+// TODO: does it belong to traits?
+template <typename InputT, typename ResultT>
+struct report
+{
+  template <typename RunnerT, typename TaskPtrT, typename ReporterT, typename T = InputT>
+  inline static void run_report(
+      const RunnerT& r_
+    , const TaskPtrT& p_
+    , const container<typename std::enable_if<!std::is_same<T, void>::value, T>::type>& i_
+    , const ReporterT& rep_)
+  {
+    ResultT aux = p_->user_callable()(r_, i_.value);
+    if (rep_)
+      rep_(aux);
+  }
+  template <typename RunnerT, typename TaskPtrT, typename ReporterT, typename T = InputT>
+  inline static void run_report(
+      const RunnerT& r_
+    , const TaskPtrT& p_
+    , const container<typename std::enable_if<std::is_same<T, void>::value, void>::type>& i_
+    , const ReporterT& rep_)
+  {
+    ResultT aux = p_->user_callable()(r_);
+    if (rep_)
+      rep_(aux);
+  }
+};
+
+template <typename InputT>
+struct report<InputT, void>
+{
+  template <typename RunnerT, typename TaskPtrT, typename ReporterT, typename T = InputT>
+  inline static void run_report(
+      const RunnerT& r_
+    , const TaskPtrT& p_
+    , const container<typename std::enable_if<!std::is_same<T, void>::value, T>::type>& i_
+    , const ReporterT& rep_)
+  {
+    p_->user_callable()(r_, i_.value);
+    if (rep_)
+      rep_();
+  }
+  template <typename RunnerT, typename TaskPtrT, typename ReporterT, typename T = InputT>
+  inline static void run_report(
+      const RunnerT& r_
+    , const TaskPtrT& p_
+    , const container<typename std::enable_if<std::is_same<T, void>::value, void>::type>& i_
+    , const ReporterT& rep_)
+  {
+    p_->user_callable()(r_);
+    if (rep_)
+      rep_();
+  }
+};
+
+// Generic context template that is unsuable - needs to be specialized
+// for different context types
+template <typename TagT, typename RunnerT, typename InputT, typename ResultT>
+class context { };
+
+template <typename RunnerT, typename InputT, typename ResultT>
+class context<tag::simple, RunnerT, InputT, ResultT> : public impl::context
+{
+ public:
+  using bound_type = std::function<ResultT(const std::shared_ptr<RunnerT>&)>;
+  using task_type  = impl::task<tag::simple, RunnerT, InputT, ResultT>;
+  using result_reporter = typename traits::result_reporter<ResultT>::type;
+  using exception_reporter = std::function<void(const std::exception_ptr&)>;
+
+ public:
+  template<typename T = InputT>
+  context(const std::shared_ptr<task_type>& t_
+        , const typename std::enable_if<!std::is_same<T, void>::value, T>::type& r_
+        , const result_reporter& r_rep_ = result_reporter()
+        , const exception_reporter& e_rep_ = exception_reporter())
+    : m_result(r_), m_task(t_), m_res_reporter(r_rep_), m_exc_reporter(e_rep_)
+  { /* noop */ }
+
+  context(const std::shared_ptr<task_type>& t_
+        , const result_reporter& r_rep_ = result_reporter()
+        , const exception_reporter& e_rep_ = exception_reporter())
+    : m_task(t_), m_res_reporter(r_rep_), m_exc_reporter(e_rep_)
+  { /* noop */ }
+
+  void entry_point(const std::shared_ptr<async::runner>& r_, impl::context* ctx_) override
+  {
+    try
+    {
+      auto r = std::dynamic_pointer_cast<RunnerT>(r_);
+      if (!r)
+        throw bad_runner_cast();
+
+      report<InputT, ResultT>::run_report(r, m_task, m_result, m_res_reporter);
+    }
+    catch (...)
+    {
+      if (m_exc_reporter)
+        m_exc_reporter(std::current_exception());
+    }
+    delete this;
+  }
+
+  std::weak_ptr<async::runner> get_runner() override
+  {
+    return m_task->get_runner();
+  }
+
+ private:
+  container<InputT>          m_result;       // Result to pass to user Callable
+  std::shared_ptr<task_type> m_task;         // reference to static task data
+  result_reporter            m_res_reporter; // result reporter if set
+  exception_reporter         m_exc_reporter; // exception reporter if set
+};
+
+} // namespace
+
+// ---------------------------------------------------------------------------
+// ----- Task methods implementation
+// -----
+// ----- They need to be implemented later as they create and use execution
+// ----- contesxts and need to know details of them.
+// ---------------------------------------------------------------------------
+
+template <typename RunnerT, typename InputT, typename ResultT>
+template <typename T>
+inline void task<tag::simple, RunnerT, InputT, ResultT>::run(
+      const std::shared_ptr<this_type>& self_
+    , const typename std::enable_if<!std::is_same<T, void>::value, T>::type& i_)
+{
+  // bind passed value with the user Callable's input and kick off
+  ::cool::async::entrails::kick(
+      new exec::context<tag::simple, RunnerT, InputT, ResultT>(
+          self_
+        , i_
+      )
+  );
+}
+
+template <typename RunnerT, typename InputT, typename ResultT>
+inline void task<tag::simple, RunnerT, InputT, ResultT>::run(const std::shared_ptr<this_type>& self_)
+{
+  // nothing to bind, just kick off the user Callable
+  ::cool::async::entrails::kick(new exec::context<tag::simple, RunnerT, InputT, ResultT>(self_));
+}
+
+
+#if 0
 // ----- common types
 // --
 // --
@@ -51,30 +320,6 @@ namespace simple    { class taskinfo; class context; }
 namespace serial    { class taskinfo; class context; }
 namespace parallel  { class taskinfo; class context; }
 namespace intercept { class taskinfo; class context; }
-
-namespace tag
-{
-struct simple {
-//  static const constexpr task_type value = task_type::simple;
-  using taskinfo = impl::simple::taskinfo;
-  using context  = impl::simple::context;
-};
-struct serial {
-//  static const constexpr task_type value = task_type::serial;
-  using taskinfo = impl::serial::taskinfo;
-  using context  = impl::serial::context;
-};
-struct parallel {
-//  static const constexpr task_type value = task_type::parallel;
-  using taskinfo = impl::parallel::taskinfo;
-  using context  = impl::parallel::context;
-};
-struct intercept {
-//  static const constexpr task_type value = task_type::intercept;
-  using taskinfo = impl::intercept::taskinfo;
-  using context  = impl::intercept::context;
-};
-} // namespace
 
 class taskinfo;
 
@@ -612,7 +857,7 @@ class task_factory<ResultT, ParamT, tag::serial>  : public types<ResultT, ParamT
   }
 #endif
 };
-
+#endif
 
 } } } // namespace
 
