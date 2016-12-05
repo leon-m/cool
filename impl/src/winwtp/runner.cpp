@@ -137,18 +137,24 @@ void runner::task_executor()
   if (cmd != TASK)
     return;
 
-  auto ctx = static_cast<cool::async::impl::context*>(static_cast<void*>(aux));
-  auto r = ctx->get_runner().lock();
+  auto ctx = static_cast<cool::async::impl::context_stack*>(static_cast<void*>(aux));
+  auto r = ctx->top()->get_runner().lock();
 
   if (r)
-    ctx->entry_point(r, ctx);
+  {
+    ctx->top()->entry_point(r, ctx->top().get());
+    if (ctx->empty())
+      delete ctx;
+    else
+      r->impl()->run(ctx);
+  }
   else
     delete ctx;
 
   start_work();
 }
 
-void runner::run(cool::async::impl::context* ctx_)
+void runner::run(cool::async::impl::context_stack* ctx_)
 {
   PostQueuedCompletionStatus(m_fifo, TASK, NULL, reinterpret_cast<LPOVERLAPPED>(ctx_));
 

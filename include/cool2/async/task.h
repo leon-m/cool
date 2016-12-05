@@ -38,7 +38,53 @@ using impl::bad_runner_cast;
 using impl::runner_not_available;
 class factory;
 
-
+/**
+ * A class template representing the objects that can be scheduled for
+ * execution by one of the @ref runner "runners".
+ *
+ * A task can be either a <em>simple task</em> which contains a @em Callable and 
+ * is associated with a specific @ref runner or a <em>compound task</em> which
+ * contains other tasks organized and exceuted in a specific way. Compound tasks
+ * themselves are not associated with @ref runner "runners" as they do not contain
+ * executable code.
+ *
+ * <b>Task Properties</b>@n
+ * Each task may accept at most one input parameter. The type of the input parameter
+ * can be inspected using @c task::input_type public type. If @c void the task does
+ * not accept input parameter. The input parameter can be specified explicitly
+ * when the task is scheduled for execution via @ref task::run() "run()" method,
+ * or is specified implicitly by the execution context of the compound task, if 
+ * the task is an element of a compound task and is scheduled to run as a part
+ * of the compound task execution.
+ *
+ * The task may return a result of any data type. The type of the result of a
+ * simple task is determined by the return value of its @em Callable. Teh type 
+ * of the result of the compound task is determined by the rules governing each 
+ * particular kind of the compound task. Since the tasks are executed asynchronously,
+ * the results cannot be reported back into the user code, and if the result is
+ * not picked up by the execution context of the compund task it is irrevocably
+ * lost.
+ *
+ * <b>Simple Tasks</b>@n
+ * Simple tasks are the cornerstone of asynchronous execution paradigm and the only
+ * type of tasks that contain the user code. The user code is provided in a form
+ * of @em Callable object, passed to one of the @ref factory::create() "create"
+ * methods of the @ref factory class. When a simple task is scheduled for
+ * execution, the @ref runner environment will pass a shared pointer of the
+ * correct type as the first argument to the user provided @em Callable. This
+ * feature can be seeen as a sort of "shared this" substitute for @c this
+ * pointer, common in synchronous programming.
+ *
+ * <b>Composed Tasks</b>@n
+ *
+ *  - @em sequential
+ *  - @em parallel
+ *  - @em conditional
+ *  - @em oneof
+ *  - @em loop
+ *  - @em repeat
+ *  - @em intercept
+ */
 
 template <typename TagT, typename RunnerT, typename InputT, typename ResultT, typename... TaskT>
 class task
@@ -73,9 +119,59 @@ class task
   std::shared_ptr<impl_type> m_impl;
 };
 
+/**
+ * This is task factory.
+ */
 class factory
 {
  public:
+  /**
+   * Create a simple task.
+   *
+   * Creates and returns a simple task associated with the @ref runner. When
+   * activated via @ref task::run() method, the task will submit its @em Callable for
+   * execution with the associated runner. The @em Callable must satisfy the
+   * following requirements:
+   *
+   *   - it can be a function pointer, lambda closure, @c std::function, or
+   *     a functor object as long as it provides a single overload of the
+   *     function call operator <tt>()</tt>.
+   *   - it must accept <tt>std::shared_ptr</tt> to the @c RunnerT as its first
+   *     parameter
+   *   - it may accept one additional input parameter which is then the input
+   *     parameter of the task
+   *   - it may, but does not need to, return a value of any type.
+   *
+   * The @em Callable implementation should not contain any blocking code. The
+   * blocking code will block the worker thread executing the callable. Since
+   * the number of working threads in the pool may be limited (optimal number
+   * should be close to the number of precessor cores to avoid taskinfo switches)
+   * the pool may run out of the active, non-blocked threads, will will block
+   * the execution of the entire program. The @em Callable implementation should
+   * use I/O event sources instead of blocking read/write calls, and should
+   * organize the data around runners instead of using the thread synchronization
+   * primitives.
+   *
+   * The @em Callable may return result. The result value will be passed to the
+   * next task in the sequence as an input parameter. If the next task in the
+   * sequence us the parallel compound task. the result will be passed to every
+   * subtask of this compund task.
+   *
+   * The @em Callable may throw a C++ exception. The unhandled exception will
+   * travel along the sequence of tasks until it reaches the exception handling
+   * task that can interept it. None of the tasks between the throwing task and
+   * the interception task will be scheduled for execution.
+   *
+   * @param r_ the @ref runner which will be used to run the @em Callable
+   * @param f_ user @em Callable to execute
+   *
+   * @note Unfortunately the objects returned by the @c std::bind template
+   *   provide multiple function call operator overloads and cannot be passed
+   *   to the simple task directly, without transforming them into @c std::function
+   *   object first.
+   *
+   * @warning The @em Callable should not contain blocking code.
+   */
   template <typename RunnerT, typename CallableT>
   inline static task<
       impl::tag::simple
@@ -101,39 +197,277 @@ class factory
     return factory::create(std::weak_ptr<RunnerT>(r_), f_);
   }
 
-  template <typename RunnerT, typename... TaskT>
+
+  template <typename... TaskT>
   inline static task<
       impl::tag::serial
-    , RunnerT
+    , typename impl::traits::first_task<TaskT...>::type::runner_type
     , typename impl::traits::first_task<TaskT...>::type::input_type
     , typename impl::traits::sequence_result<TaskT...>::type
-    , typename std::decay<TaskT>::type ...>
-  sequential(const std::weak_ptr<RunnerT>& r_, TaskT&&... t_)
+    , typename std::decay<TaskT>::type ...
+  > sequential(TaskT&&... t_)
   {
     using result_type = typename impl::traits::sequence_result<TaskT...>::type;
     using input_type = typename impl::traits::first_task<TaskT...>::type::input_type;
-    using task_type = task<impl::tag::serial, RunnerT, input_type, result_type, typename std::decay<TaskT>::type...>;
+    using task_type = task<impl::tag::serial, typename impl::traits::first_task<TaskT...>::type::runner_type, input_type, result_type, typename std::decay<TaskT>::type...>;
 
     static_assert(
         impl::traits::all_chained<typename std::decay<TaskT>::type...>::result::value
       , "The type of the parameter of each task in the sequence must match the return type of the preceding task.");
 
-    return task_type(std::make_shared<typename task_type::impl_type>(r_, t_.m_impl...));
+    return task_type(std::make_shared<typename task_type::impl_type>(t_.m_impl...));
   }
 
-  template <typename RunnerT, typename... TaskT>
+  template <typename... TaskT>
   inline static task<
-      impl::tag::serial
-    , RunnerT
+      impl::tag::parallel
+    , typename impl::traits::first_task<TaskT...>::type::runner_type
     , typename impl::traits::first_task<TaskT...>::type::input_type
-    , typename impl::traits::sequence_result<TaskT...>::type
-    , typename std::decay<TaskT>::type...>
-  sequential(const std::shared_ptr<RunnerT>& r_, TaskT&&... t_)
+    , typename impl::traits::parallel_result<TaskT...>::type
+    , typename std::decay<TaskT>::type ...
+  > parallel(TaskT&&... t_)
   {
-    return sequential(std::weak_ptr<RunnerT>(r_), std::forward<TaskT>(t_)...);
+    using result_type = typename impl::traits::parallel_result<TaskT...>::type;
+    using input_type = typename impl::traits::first_task<TaskT...>::type::input_type;
+    using task_type = task<
+        impl::tag::parallel
+      , typename impl::traits::first_task<TaskT...>::type::runner_type
+      , input_type
+      , result_type
+      , typename std::decay<TaskT>::type...>;
 
+    static_assert(
+        impl::traits::all_same<typename std::decay<typename std::decay<TaskT>::type::input_type>::type...>::value
+      , "All parallel tasks must have the same parameter type or no parameter");
+
+    return task_type(std::make_shared<typename task_type::impl_type>());
   }
 
+  /**
+   * Create a compound task which will, depending on the predicate, execute one
+   * of its subtasks.
+   *
+   * This method template creates and returns a compound task which will, when
+   * executed, evaluate the predicate @c pred_, and run task @c t1_ if the predicate
+   * evaluates to @c true. Owherwise it will run task @c t2_. Such compount task
+   * can be understood as an equivalent of the @c if statement in the synchronous
+   * programming. The following are requirements for the user supplied predicate
+   * and tasks:
+   * - the predicate and both tasks must accept an input parameter of the same
+   *   type. The same input value passed to the predicate to determine which
+   *   subtask to execute will be passed to the chosen subtask.
+   * - the predicate must return result of the @c bool type.
+   * - Both tasks must return result of the same type. The result type of the
+   *   compound task is the result type of the supplied subtasks.
+   *
+   * @param pred_ user supplied predicate used to determine which task to execute
+   * @param t1_   task to run if the predicate evaluates to @c true
+   * @param t2_   task to run if the predicate evaluates to @c false
+   *
+   * @note The thread context of evaluating the predicate @c pred_ is not
+   * defined.
+   *
+   */
+  template <typename PredicateT, typename TaskT, typename TaskY>
+  inline static task<
+      impl::tag::conditional
+    , impl::default_runner_type
+    , typename TaskT::input_type
+    , typename TaskT::result_type
+    , typename std::decay<TaskT>::type
+    , typename std::decay<TaskY>::type
+  > conditional(const PredicateT& pred_, const TaskT& t1_, const TaskY& t2_)
+  {
+    using pred_input_type = typename std::decay<typename impl::traits::function_traits<PredicateT>::template arg<0>::type>::type;
+    using input_type = typename TaskT::input_type;
+    using result_type = typename TaskT::result_type;
+    using task_type = task<
+        impl::tag::conditional
+      , impl::default_runner_type
+      , input_type
+      , result_type
+      , typename std::decay<TaskT>::type
+      , typename std::decay<TaskY>::type>;
+
+    static_assert(
+        std::is_same<typename TaskT::input_type, typename TaskY::input_type>::value
+      , "Both tasks and the predicate must accept the input parameter of the same type");
+    static_assert(
+        std::is_same<typename TaskT::input_type, pred_input_type>::value
+      , "Both tasks and the predicate must accept the input parameter of the same type");
+    static_assert(
+        std::is_same<typename TaskT::result_type, typename TaskY::result_type>::value
+      , "Both tasks must return value of the same type");
+    static_assert(
+        std::is_same<typename impl::traits::function_traits<PredicateT>::result_type, bool>::value
+      , "Predicate must return value of type bool");
+    static_assert(
+        1 == impl::traits::function_traits<PredicateT>::arity::value
+      , "Predicate must accept exactly one parameter");
+
+    return task_type(std::make_shared<typename task_type::impl_type>(
+       static_cast<typename task_type::impl_type::predicate_type>(pred_)
+      , t1_.m_impl
+      , t2_.m_impl
+    ));
+  }
+
+  /**
+   * Create a compound task which will, depending on the predicates, execute one of its subtasks.
+   *
+   * This method template creates and returns a compound task which will, when
+   * executed, evaluate the predicates of each tuple in the same order
+   * as supplied to the method call until it finds the predicate which evaluates
+   * to @c true. It will then run the task of this tuple. If none of the predicates
+   * evaluate to @c true it will select @c default_ task to run. Such compount task
+   * can be understood as an equivalent of the @c switch statement in the synchronous
+   * programming. The following are requirements for the user supplied predicates
+   * and tasks:
+   * - all predicates and tasks must accept an input parameter of the same
+   *   type. The same input value passed to the predicate to determine which
+   *   subtask to execute will be passed to the chosen subtask. The type of
+   *   the input parameter will be the type of the input parameter of the returned
+   *   compound task
+   * - the predicates must return result of the @c bool type.
+   * - all tasks must return result of the same type. The result type of the
+   *   returned compound task is the result type of the supplied subtasks.
+   *
+   * @param default_ task to run if none of predicates yields @c true
+   * @param arg_ one or more tuples containing predicate / tasks pairs
+   *
+   * @note The thread context of evaluating the predicates is not defined.
+   */
+  template <typename TaskY, typename... PredicateT, typename... TaskT>
+  inline static task<
+      impl::tag::oneof
+    , typename TaskY::runner_type
+    , typename TaskY::input_type
+    , typename TaskY::result_type
+    , typename std::decay<TaskY>::type
+    , TaskT...
+  > oneof(const TaskY& default_, const std::tuple<PredicateT, TaskT>&... arg_)
+  {
+    using result_type = typename TaskY::result_type;
+    using input_type = typename TaskY::input_type;
+    using task_type = task<
+    impl::tag::oneof
+    , typename TaskY::runner_type
+    , input_type
+    , result_type
+    , typename std::decay<TaskY>::type
+    , TaskT...>;
+
+    return task_type(std::make_shared<typename task_type::impl_type>());
+  }
+
+
+  /**
+   * Create a compound task which will, depending on the predicate, execute the
+   * task zero or more times.
+   *
+   * This method creates and returns a compound task which will, when executed,
+   * supply the input parameter to predicate and if the predicate yields @c true
+   * will run the task. Upon the task completion its result will be fed to the
+   * predicate and if the predicate yields @c true, it will run the task again.
+   * This cycle will repeat until the predicate yields false.
+   *
+   * The following are requirements for the predicate and the user task:
+   * - both predicate and the user task must accept the same input parameter
+   *   type (which must not be @c void), This will be the input parameter type
+   *   of the resulting compound task
+   * - the predicate must return @c bool result
+   * - the result type of the user task must be the same as its input type.
+   *
+   * The resulting task will have the public type declarations set to the following
+   * types:
+   *
+   *  - @c runner_type will be set to the <tt>TaskT::runner_type</tt>
+   *  - @c input_type will be set to the <tt>TaskT::input_type</tt>, which must
+   *   be an integral type
+   *  - @c result_type will be set the <tt>TaskT::result_type</tt>, which must
+   *   be @c void type.
+   *
+   * @note The thread context of evaluating the predicate is not defined.
+   */
+  template <typename PredicateT, typename TaskT>
+  inline static task<
+      impl::tag::loop
+    , impl::default_runner_type
+    , typename TaskT::input_type
+    , typename TaskT::result_type
+    , typename std::decay<TaskT>::type
+  > loop(const PredicateT& pred_, const TaskT& t_)
+  {
+    using pred_input_type = typename std::decay<typename impl::traits::function_traits<PredicateT>::template arg<0>::type>::type;
+    using input_type = typename TaskT::input_type;
+    using result_type = typename TaskT::result_type;
+    using task_type = task<
+        impl::tag::loop
+      , impl::default_runner_type
+      , input_type
+      , result_type
+      , typename std::decay<TaskT>::type>;
+
+    static_assert(
+        std::is_same<pred_input_type, input_type>::value
+      , "Predicate and the task must have the same input type");
+    static_assert(
+        1 == impl::traits::function_traits<PredicateT>::arity::value
+      , "Predicate must accept exactly one parameter");
+    static_assert(
+        std::is_same<typename impl::traits::function_traits<PredicateT>::result_type, bool>::value
+      , "Predicate must return value of type bool");
+    static_assert(
+        std::is_same<input_type, result_type>::value
+      , "The result_type of the task must be the same as its input_type");
+
+    return task_type(std::make_shared<typename task_type::impl_type>(
+          static_cast<typename task_type::impl_type::predicate_type>(pred_)
+        , t_.m_impl));
+  }
+  /**
+   * Create a compound task which will execute the task exactly the specified
+   * number of times.
+   *
+   * This method creates and returns a compound task which will, when executed,
+   * run its subtask exactly the number of times specified by its input
+   * parameter.
+   *
+   * The resulting task will have the public type declarations set to the following
+   * types:
+   *
+   *  - @c runner_type will be set to the <tt>TaskT::runner_type</tt>
+   *  - @c input_type will be set to the <tt>TaskT::input_type</tt>, which must
+   *   be an integral type
+   *  - @c result_type will be set the <tt>TaskT::result_type</tt>, which must
+   *   be @c void type.
+   */
+  template <typename TaskT>
+  inline static task<
+      impl::tag::repeat
+    , impl::default_runner_type
+    , typename TaskT::input_type
+    , typename TaskT::result_type
+    , typename std::decay<TaskT>::type
+  > repeat(const TaskT& t_)
+  {
+    using input_type = typename TaskT::input_type;
+    using result_type = typename TaskT::result_type;
+    using task_type = task<
+        impl::tag::repeat
+      , impl::default_runner_type
+      , input_type
+      , result_type
+      , typename std::decay<TaskT>::type>;
+
+    static_assert(
+        std::is_integral<input_type>::value
+      , "The task must accept input of integral type");
+    static_assert(
+        std::is_void<result_type>::value
+      , "The task must not return result");
+    return task_type(std::make_shared<typename task_type::impl_type>(t_.m_impl));
+  }
 };
 
 

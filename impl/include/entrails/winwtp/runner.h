@@ -47,7 +47,7 @@ class runner : public misc::named
 
   void start();
   void stop();
-  void run(cool::async::impl::context*);
+  void run(cool::async::impl::context_stack*);
 
  private:
   static VOID CALLBACK task_executor(PTP_CALLBACK_INSTANCE instance_, PVOID pv_, PTP_WORK work_);

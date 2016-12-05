@@ -70,7 +70,7 @@ void runner::stop()
   }
 }
 
-void runner::run(cool::async::impl::context* ctx_)
+void runner::run(cool::async::impl::context_stack* ctx_)
 {
   ::dispatch_async_f(m_queue, ctx_, task_executor);
 }
@@ -78,11 +78,17 @@ void runner::run(cool::async::impl::context* ctx_)
 // executor for task::run()
 void runner::task_executor(void* arg_)
 {
-  auto ctx = static_cast<cool::async::impl::context*>(arg_);
+  auto ctx = static_cast<cool::async::impl::context_stack*>(arg_);
 
-  auto r = ctx->get_runner().lock();
+  auto r = ctx->top()->get_runner().lock();
   if (r)
-    ctx->entry_point(r, ctx);
+  {
+    ctx->top()->entry_point(r, ctx->top());
+    if (ctx->empty())
+      delete ctx;
+    else
+      r->impl()->run(ctx);
+  }
   else
     delete ctx;
 }

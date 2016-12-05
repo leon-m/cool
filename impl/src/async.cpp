@@ -59,31 +59,25 @@ void runner::stop()
 namespace entrails
 {
 
-void kick(impl::context* ctx_)
+void kick(impl::context_stack* ctx_)
 {
   if (!ctx_)
     throw cool::exception::illegal_state("this task object is in undefined state with null context");
 
-  auto aux = ctx_->get_runner().lock();
+  auto aux = ctx_->top()->get_runner().lock();
   if (!aux)
     throw runner_not_available();
 
   aux->impl()->run(ctx_);
-
 }
 
 } // namespace
 
 // ----- implementation of impl::task helpers
-namespace impl {
-#if 0
-namespace tag {
-const task_type simple::value;
-const task_type serial::value;
-const task_type parallel::value;
-const task_type intercept::value;
-}
-#endif
+namespace impl
+{
+
+
 } // namespace
 
 

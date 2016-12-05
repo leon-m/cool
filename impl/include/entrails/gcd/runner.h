@@ -43,7 +43,7 @@ class runner : public misc::named
 
   void start();
   void stop();
-  void run(cool::async::impl::context*);
+  void run(cool::async::impl::context_stack*);
 
  private:
   static void task_executor(void*);
