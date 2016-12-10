@@ -34,9 +34,13 @@
 # ifndef NDEBUG
 #	define NDEBUG
 # endif
+# ifndef DISPATCH_DEBUG
 # define DISPATCH_DEBUG 0
+# endif
 #else
+# ifndef DISPATCH_DEBUG
 # define DISPATCH_DEBUG 1
+# endif
 #endif
 
 /* define as 1 to enable the use of kevent */
