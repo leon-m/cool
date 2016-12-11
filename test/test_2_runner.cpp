@@ -154,7 +154,7 @@ struct my_other_runner : public runner
   const int m_id = 100000;
   using ptr = std::shared_ptr<my_other_runner>;
 };
-#if 0
+
 TEST(runner, basic)
 {
   const std::string base = "si.digiverse.cool2.runner";
@@ -162,64 +162,8 @@ TEST(runner, basic)
   EXPECT_EQ(base, r.name().substr(0,base.length()));
 }
 
-TEST(runner, basic_task_non_void_non_void)
-{
-	auto r = std::make_shared<my_runner>();
 
-	// std::string ret, int parameter
-	{
-		cool::basis::vow<void> v_;
-		auto a_ = v_.get_aim();
-
-		auto t = factory::create(
-			r
-			, [&v_](const my_runner::ptr& r_, int n_)
-		{
-			v_.set();
-			return std::to_string(n_);
-		}
-		);
-		t.run(15);
-		EXPECT_NO_THROW(a_.get(ms(100)));
-	}
-
-	// int ret void parameter
-	{
-		cool::basis::vow<void> v_;
-		auto a_ = v_.get_aim();
-
-		auto t = factory::create(r, [&v_](const my_runner::ptr& r_) -> int { v_.set(); return 5; });
-		t.run();
-
-		EXPECT_NO_THROW(a_.get(ms(100)));
-	}
-
-	// void ret int parameter
-	{
-		cool::basis::vow<void> v_;
-		auto a_ = v_.get_aim();
-
-		auto t = factory::create(r, [&v_](const my_runner::ptr& r_, int n_) -> void { v_.set(); });
-		t.run(42);
-
-		EXPECT_NO_THROW(a_.get(ms(100)));
-	}
-	// void ret void paramter
-	{
-		cool::basis::vow<void> v_;
-		auto a_ = v_.get_aim();
-
-		auto t = factory::create(
-			r
-			, [&v_](const my_runner::ptr& r_) -> void
-		{
-			v_.set();
-		}
-		);
-		t.run();
-		EXPECT_NO_THROW(a_.get(ms(100)));
-	}
-}
+#if 0
 
 TEST(runner, sequence_of_tasks)
 {
@@ -340,7 +284,7 @@ struct c_void     { void operator ()(const runner::ptr& r) { } };
 
 // This tests si basically compilation test to see whether the stuff compiles
 // with different Callable types
-TEST(task, basic_compile_task)
+TEST(compile, task_simple)
 {
   auto r = std::make_shared<my_runner>();
 
@@ -455,7 +399,7 @@ TEST(task, basic_compile_task)
 #endif
 }
 
-TEST(task, basic_compile_parallel)
+TEST(compile, task_parallel)
 {
 
   auto r = std::make_shared<my_runner>();
@@ -498,7 +442,7 @@ TEST(task, basic_compile_parallel)
   }
 }
 
-TEST(task, basic_compile_sequential)
+TEST(compile, task_sequential)
 {
   auto r = std::make_shared<my_runner>();
   {
@@ -535,7 +479,7 @@ TEST(task, basic_compile_sequential)
   }
 }
 
-TEST(task, basic_compile_conditional)
+TEST(compile, task_conditional)
 {
   auto r = std::make_shared<my_runner>();
   {
@@ -546,10 +490,9 @@ TEST(task, basic_compile_conditional)
     IS_PAR_TYPE(double, c);
     IS_RET_TYPE(double, c);
   }
-
 }
 
-TEST(task, basic_compile_oneof)
+TEST(compile, task_oneof)
 {
   auto r = std::make_shared<my_runner>();
   {
@@ -565,10 +508,9 @@ TEST(task, basic_compile_oneof)
     IS_PAR_TYPE(double, c);
     IS_RET_TYPE(double, c);
   }
-  
 }
 
-TEST(task, basic_compile_loop)
+TEST(compile, task_loop)
 {
   auto r = std::make_shared<my_runner>();
   {
@@ -581,10 +523,9 @@ TEST(task, basic_compile_loop)
     IS_PAR_TYPE(double, c);
     IS_RET_TYPE(double, c);
   }
-  
 }
 
-TEST(task, basic_compile_repeat)
+TEST(compile, task_repeat)
 {
   auto r = std::make_shared<my_runner>();
   {
@@ -594,10 +535,69 @@ TEST(task, basic_compile_repeat)
     IS_PAR_TYPE(int, c);
     IS_RET_TYPE(void, c);
   }
-  
 }
 
-TEST(task, run_conditional)
+
+TEST(run, task_simple_task)
+{
+	auto r = std::make_shared<my_runner>();
+
+	// std::string ret, int parameter
+	{
+		cool::basis::vow<void> v_;
+		auto a_ = v_.get_aim();
+
+		auto t = factory::create(
+			r
+			, [&v_](const my_runner::ptr& r_, int n_)
+		{
+			v_.set();
+			return std::to_string(n_);
+		}
+		);
+		t.run(15);
+		EXPECT_NO_THROW(a_.get(ms(100)));
+	}
+
+	// int ret void parameter
+	{
+		cool::basis::vow<void> v_;
+		auto a_ = v_.get_aim();
+
+		auto t = factory::create(r, [&v_](const my_runner::ptr& r_) -> int { v_.set(); return 5; });
+		t.run();
+
+		EXPECT_NO_THROW(a_.get(ms(100)));
+	}
+
+	// void ret int parameter
+	{
+		cool::basis::vow<void> v_;
+		auto a_ = v_.get_aim();
+
+		auto t = factory::create(r, [&v_](const my_runner::ptr& r_, int n_) -> void { v_.set(); });
+		t.run(42);
+
+		EXPECT_NO_THROW(a_.get(ms(100)));
+	}
+	// void ret void paramter
+	{
+		cool::basis::vow<void> v_;
+		auto a_ = v_.get_aim();
+
+		auto t = factory::create(
+			r
+			, [&v_](const my_runner::ptr& r_) -> void
+		{
+			v_.set();
+		}
+		);
+		t.run();
+		EXPECT_NO_THROW(a_.get(ms(100)));
+	}
+}
+
+TEST(run, task_conditional)
 {
   auto r1 = std::make_shared<my_runner>();
   auto r2 = std::make_shared<my_other_runner>();
@@ -651,7 +651,7 @@ TEST(task, run_conditional)
   }
 }
 
-TEST(task, run_loop)
+TEST(run, task_loop)
 {
   auto r = std::make_shared<my_runner>();
   {
@@ -680,7 +680,7 @@ TEST(task, run_loop)
   }
 }
 
-TEST(task, run_repeat)
+TEST(run, task_repeat)
 {
   auto r = std::make_shared<my_runner>();
   {
@@ -737,7 +737,7 @@ TEST(task, run_repeat)
   }
 }
 
-TEST(task, combo_conditional)
+TEST(run, task_repeat_conditional)
 {
   auto r1 = std::make_shared<my_runner>();
   auto r2 = std::make_shared<my_other_runner>();
@@ -761,6 +761,12 @@ TEST(task, combo_conditional)
     EXPECT_EQ(500, low);
     EXPECT_EQ(500, high);
   }
+}
+
+TEST(run, task_loop_conditional)
+{
+  auto r1 = std::make_shared<my_runner>();
+  auto r2 = std::make_shared<my_other_runner>();
   {
     const int max_repeat = 1000;
     const int lim_true   = 900;
@@ -790,7 +796,7 @@ TEST(task, combo_conditional)
             )
           , factory::create(
                 r2
-              , [&count, &v_, &id_sum] (const std::shared_ptr<my_other_runner>& r_, int n_)
+              , [&count, &v_, &id_sum, &max_repeat] (const std::shared_ptr<my_other_runner>& r_, int n_)
                 {
                   id_sum += r_->m_id;
                   v_.set();
@@ -805,31 +811,5 @@ TEST(task, combo_conditional)
     EXPECT_EQ(100900, id_sum);
   }
 }
-
-TEST(task, parallel_return_value)
-{
-#if 0
-  auto r = std::make_shared<my_runner>();
-
-  cool::basis::vow<void> v_;
-  auto a_ = v_.get_aim();
-
-  auto a = taskop::create(r , [](const runner::ptr& r) -> double { return 42.0; });
-  auto b = taskop::create(r , [](const runner::ptr& r) -> int { return 21; });
-  auto c = a.parallel(b);
-  auto d = taskop::create(
-      r
-    , [&v_] (const runner::ptr& r, const decltype(c)::result_t& res)
-      {
-        EXPECT_EQ(42.0, std::get<0>(res));
-        EXPECT_EQ(21, std::get<1>(res));
-        v_.set();
-      }
-  );
-  c.sequential(d).run();
-  EXPECT_NO_THROW(a_.get(ms(100)));
-#endif
-}
-
 
 

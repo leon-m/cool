@@ -142,7 +142,7 @@ void runner::task_executor()
 
   if (r)
   {
-    ctx->top()->entry_point(r, ctx->top().get());
+    ctx->top()->entry_point(r, ctx->top());
     if (ctx->empty())
       delete ctx;
     else
