@@ -307,7 +307,7 @@ data_observer::data_observer(const handler_t& handler,
                              CoalesceStrategy strategy,
                              unsigned long mask)
     : async_source(::dispatch_source_create(
-            strategy == Add ? DISPATCH_SOURCE_TYPE_DATA_ADD : DISPATCH_SOURCE_TYPE_DATA_ADD, 0, mask, runner)
+            strategy == Add ? DISPATCH_SOURCE_TYPE_DATA_ADD : DISPATCH_SOURCE_TYPE_DATA_OR, 0, mask, runner)
           , handler)
 {
   ::dispatch_source_set_event_handler_f(source(), &data_observer::handler);
