@@ -61,6 +61,7 @@ void fd_io::cancel_cb(void *ctx)
   auto aux = context_t::data(ctx);
   if (aux.is_owner)
     ::close(aux.fd);
+  ::dispatch_release(context_t::source(ctx));
   delete static_cast<context_t*>(ctx);
 }
 
@@ -214,6 +215,7 @@ timer::timer(const std::string& prefix, const handler_t& handler, const task::ru
     : named(prefix)
     , async_source(::dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, runner), handler)
 {
+  ::dispatch_source_set_cancel_handler_f(source(), &timer::cancel_handler);
   ::dispatch_source_set_event_handler_f(source(), &timer::timer_handler);
 }
 
@@ -242,6 +244,12 @@ void timer::timer_handler(void *ctx)
   {
     assert(0 && "User callback has thrown an exception");
   }
+}
+
+void timer::cancel_handler(void *ctx)
+{
+  ::dispatch_release(context_t::source(ctx));
+  delete static_cast<context_t*>(ctx);
 }
 
 void timer::start()
@@ -290,6 +298,7 @@ void fs_observer::handler(void* ctx)
 void fs_observer::cancel_handler(void *ctx)
 {
   ::close(context_t::data(ctx));
+  ::dispatch_release(context_t::source(ctx));
   delete static_cast<context_t*>(ctx);
 }
 #endif
@@ -310,6 +319,7 @@ data_observer::data_observer(const handler_t& handler,
             strategy == Add ? DISPATCH_SOURCE_TYPE_DATA_ADD : DISPATCH_SOURCE_TYPE_DATA_OR, 0, mask, runner)
           , handler)
 {
+  ::dispatch_source_set_cancel_handler_f(source(), &data_observer::cancel_handler);
   ::dispatch_source_set_event_handler_f(source(), &data_observer::handler);
 }
 
@@ -330,6 +340,12 @@ void data_observer::handler(void* ctx)
   }
 }
 
+void data_observer::cancel_handler(void *ctx)
+{
+  ::dispatch_release(context_t::source(ctx));
+  delete static_cast<context_t*>(ctx);
+}
+
 // --------------------------------------------------------------------------
 // --------------------------------------------------------------------------
 // --------------------------------------------------------------------------
@@ -348,6 +364,7 @@ proc_observer::proc_observer(const handler_t& handler,
             DISPATCH_SOURCE_TYPE_PROC, pid, mask, runner)
           , handler)
 {
+  ::dispatch_source_set_cancel_handler_f(source(), &proc_observer::cancel_handler);
   ::dispatch_source_set_event_handler_f(source(), &proc_observer::handler);
 }
 
@@ -362,6 +379,13 @@ void proc_observer::handler(void* ctx)
     assert(0 && "User callback has thrown an exception");
   }
 }
+
+void proc_observer::cancel_handler(void *ctx)
+{
+  ::dispatch_release(context_t::source(ctx));
+  delete static_cast<context_t*>(ctx);
+}
+
 #endif
 
 } } } // namespace
