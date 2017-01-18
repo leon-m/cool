@@ -661,22 +661,28 @@ TEST(run, task_loop)
     const int iterations = 1000;
     int count = 0;
 
-    factory::loop(
+    auto t = factory::loop(
         [&iterations](int step) { return step < iterations; }
       , factory::create(
             r
           , [&count, &v_, &iterations] (const std::shared_ptr<my_runner>& r_, int step_)
             {
               ++count;
-              if (count == iterations)
+              if (count >= iterations)
                 v_.set();
               return step_ + 1;
             }
         )
-    ).run(0);
+    );
+
+    t.run(0);
 
     EXPECT_NO_THROW(a_.get(ms(1000)));
     EXPECT_EQ(iterations, count);
+    count = 0;
+    t.run(2000);
+    std::this_thread::sleep_for(ms(10));
+    EXPECT_EQ(0, count);
   }
 }
 
@@ -734,6 +740,19 @@ TEST(run, task_repeat)
 
     EXPECT_NO_THROW(a_.get(ms(4000)));
     EXPECT_EQ(500500, count);
+  }
+  {
+    std::size_t count = 0;
+    auto t = factory::create(r, [&count](const std::shared_ptr<my_runner>& r_, const std::size_t arg_) { ++count; throw std::runtime_error(""); });
+    auto c = factory::repeat(t);
+
+    c.run(0);
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    EXPECT_EQ(0, count);
+
+    c.run(2);
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    EXPECT_EQ(1, count);
   }
 }
 
@@ -811,5 +830,36 @@ TEST(run, task_loop_conditional)
     EXPECT_EQ(100900, id_sum);
   }
 }
+#if 0
+TEST(run, conditional_repeat_nothing_to_run)
+{
+  auto r = std::make_shared<my_runner>();
+  {
+    int res = 0;
+    auto t = factory::repeat(
+      factory::conditional(
+        [] (int n) { return n != 1; }
+        , factory::create(
+              r
+            , [&res] (const std::shared_ptr<my_runner>& r, int n) { res = 1; }
+          )
+        , factory::repeat(
+            factory::create(
+                r
+              , [] (const std::shared_ptr<my_runner>& r, int n){}
+            )
+          )
+    ));
 
+    t.run(0);
+    std::this_thread::sleep_for(ms(10));
+    EXPECT_EQ(0, res);
 
+    t.run(1);
+    std::this_thread::sleep_for(ms(10));
+    EXPECT_EQ(1, res);
+  }
+}
+#endif
+
+// TODO: test internal nothing_to_run exception once the serial task is working !!!!!

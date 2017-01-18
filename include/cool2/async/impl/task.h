@@ -60,6 +60,7 @@ namespace entrails { void kick(impl::context_stack* ctx_); }
 
 namespace impl {
 
+// exceptions generated internaly by async runtime
 class internal_exception : public cool::exception::runtime_exception
 {
 public:
@@ -69,7 +70,7 @@ public:
 
 class bad_runner_cast : public internal_exception
 {
-public:
+ public:
   bad_runner_cast()
     : internal_exception("dynamic_pointer_cast to RunnerT type unexpectedly failed")
   { /* noop */ }
@@ -80,6 +81,14 @@ class runner_not_available : public internal_exception
  public:
   runner_not_available()
     : internal_exception("the destination runner not available")
+  { /* noop */ }
+};
+
+class nothing_to_run : public internal_exception
+{
+ public:
+  nothing_to_run()
+    : internal_exception("task will not run owing to predicate resolution")
   { /* noop */ }
 };
 
@@ -106,9 +115,14 @@ class context
  public:
   virtual ~context() { /* noop */ }
 
+  // returns pointer to runner that is supposed to execute this context
   virtual std::weak_ptr<async::runner> get_runner() const = 0;
+  // entry point to this context; to enter when context starts execute
   virtual void entry_point(const std::shared_ptr<async::runner>&, context*) = 0;
+  // name of the context (context type name) for debugging purposes
   virtual const char* name() const = 0;
+  // returns true if entry point will execute, false otherwise
+  virtual bool will_execute() const = 0;
 };
 
 
@@ -163,11 +177,12 @@ template <typename RunnerT, typename InputT, typename ResultT>
 class task<tag::simple, RunnerT, InputT, ResultT>
 {
  public:
+  using tag_type         = tag::simple;
   using this_type        = task;
+  using runner_type      = RunnerT;
   using result_type      = ResultT;
   using input_type       = InputT;
-  using runner_type      = RunnerT;
-  using tag_type         = tag::simple;
+  using context_type     = exec::context<tag_type, runner_type, input_type, result_type>;
   using unbound_type     = typename traits::unbound_type<RunnerT, InputT, ResultT>::type;
 
  public:
@@ -194,13 +209,17 @@ class task<tag::simple, RunnerT, InputT, ResultT>
     ::cool::async::entrails::kick(create_context(nullptr, self_));
   }
   template <typename T = InputT>
-  exec::context<tag_type, RunnerT, InputT, ResultT>*
-  create_context(
+  inline context_type* create_context(
         context_stack* stack_
       , const std::shared_ptr<this_type>& self_
-      , const typename std::enable_if<!std::is_same<T, void>::value, T>::type& i_);
-  exec::context<tag_type, RunnerT, InputT, ResultT>*
-  create_context(context_stack* stack_, const std::shared_ptr<this_type>& self_);
+      , const typename std::enable_if<!std::is_same<T, void>::value, T>::type& i_)
+  {
+    return context_type::create(stack_, self_, i_);
+  }
+  inline context_type* create_context(context_stack* stack_, const std::shared_ptr<this_type>& self_)
+  {
+    return context_type::create(stack_, self_);
+  }
 
   inline std::weak_ptr<runner_type> get_runner() const { return m_runner; }
   inline unbound_type& user_callable()                 { return m_unbound; }
@@ -210,29 +229,48 @@ class task<tag::simple, RunnerT, InputT, ResultT>
   unbound_type               m_unbound;    // user Callable
 };
 
+// ---------------------------------------------------------------------------
+// ------
+// ------
+// ------ tag::serial task implementation
+// ------
+// ------
+// ---------------------------------------------------------------------------
 template <typename RunnerT, typename InputT, typename ResultT, typename... TaskT>
 class task<tag::serial, RunnerT, InputT, ResultT, TaskT...>
 {
  public:
+  using tag_type         = tag::serial;
   using this_type        = task;
+  using runner_type      = RunnerT;
   using result_type      = ResultT;
   using input_type       = InputT;
-  using runner_type      = RunnerT;
-  using tag_type         = tag::serial;
-
-  template <typename T = InputT>
-  void run(const std::shared_ptr<this_type>& self_, const typename std::enable_if<!std::is_same<T, void>::value, T>::type& i_);
-  void run(const std::shared_ptr<this_type>& self_);
+  using context_type     = exec::context<tag_type, runner_type, input_type, result_type, TaskT...>;
 
   explicit inline task(const std::shared_ptr<TaskT>&... tp_)
   {
     m_tasks = std::make_tuple(tp_...);
   }
+  template <typename T = InputT>
+  void run(const std::shared_ptr<this_type>& self_, const typename std::enable_if<!std::is_same<T, void>::value, T>::type& i_);
+  void run(const std::shared_ptr<this_type>& self_);
+  template <typename T = InputT>
+  inline context_type* create_context(
+        context_stack* stack_
+      , const std::shared_ptr<this_type>& self_
+      , const typename std::enable_if<!std::is_same<T, void>::value, T>::type& i_)
+  {
+    return context_type::create(stack_, self_, i_);
+  }
+  inline context_type* create_context(context_stack* stack_, const std::shared_ptr<this_type>& self_)
+  {
+    return context_type::create(stack_, self_);
+  }
+
 
  private:
   std::weak_ptr<runner_type> m_runner;
   std::tuple<std::shared_ptr<TaskT>...> m_tasks;
-
 };
 
 // ---------------------------------------------------------------------------
@@ -246,11 +284,12 @@ template <typename InputT, typename ResultT, typename TaskT, typename TaskY>
 class task<tag::conditional, default_runner_type, InputT, ResultT, TaskT, TaskY>
 {
  public:
+  using tag_type       = tag::conditional;
   using this_type      = task;
+  using runner_type    = default_runner_type;
   using result_type    = ResultT;
   using input_type     = InputT;
-  using runner_type    = default_runner_type;
-  using tag_type       = tag::conditional;
+  using context_type   = exec::context<tag_type, runner_type, input_type, result_type, TaskT, TaskY>;
   using predicate_type = std::function<bool(const InputT&)>;
 
  public:
@@ -262,12 +301,19 @@ class task<tag::conditional, default_runner_type, InputT, ResultT, TaskT, TaskY>
 
   inline void run(const std::shared_ptr<this_type>& self_, const InputT& i_)
   {
-    auto stack = new exec::context_stack;
-    create_context(stack, self_, i_);
-    ::cool::async::entrails::kick(stack);
+    try {
+      REP("++++++ task::conditional::run(" << i_ << ")" );
+      auto stack = new exec::context_stack;
+      create_context(stack, self_, i_);
+      ::cool::async::entrails::kick(stack);
+    }
+    catch (const nothing_to_run&) { /* noop */ }
   }
-  exec::context<tag_type, runner_type, InputT, ResultT, TaskT, TaskY>*
-  create_context(context_stack* st_, const std::shared_ptr<this_type>& self_, const InputT& i_);
+
+  inline context_type*create_context(context_stack* st_, const std::shared_ptr<this_type>& self_, const InputT& i_)
+  {
+    return context_type::create(st_, self_, i_);
+  }
 
   inline std::weak_ptr<runner_type> get_runner() const    { return m_if_task->get_runner(); }
   inline const predicate_type& predicate() const          { return m_predicate; }
@@ -291,11 +337,12 @@ template <typename InputT, typename ResultT, typename TaskT>
 class task<tag::loop, default_runner_type, InputT, ResultT, TaskT>
 {
  public:
-  using this_type   = task;
-  using result_type = ResultT;
-  using input_type  = InputT;
-  using runner_type = default_runner_type;
-  using tag_type    = tag::loop;
+  using this_type       = task;
+  using result_type    = ResultT;
+  using input_type     = InputT;
+  using runner_type    = default_runner_type;
+  using tag_type       = tag::loop;
+  using context_type   = exec::context<tag_type, runner_type, input_type, result_type, TaskT>;
   using predicate_type = std::function<bool(const InputT&)>;
 
  public:
@@ -305,13 +352,18 @@ class task<tag::loop, default_runner_type, InputT, ResultT, TaskT>
 
   inline void run(const std::shared_ptr<this_type>& self_, const InputT& i_)
   {
-    auto stack = new exec::context_stack;
-    create_context(stack, self_, i_);
-    REP("++++++ task::loop::run(" << i_ << ")" );
-    ::cool::async::entrails::kick(stack);
+    try {
+      REP("++++++ task::loop::run(" << i_ << ")" );
+      auto stack = new exec::context_stack;
+      create_context(stack, self_, i_);
+      ::cool::async::entrails::kick(stack);
+    }
+    catch (const nothing_to_run&) { /* noop */ }
   }
-  exec::context<tag_type, runner_type, InputT, ResultT, TaskT>*
-  create_context(context_stack* st_, const std::shared_ptr<this_type>& self_, const InputT& i_);
+  context_type* create_context(context_stack* st_, const std::shared_ptr<this_type>& self_, const InputT& i_)
+  {
+    return context_type::create(st_, self_, i_);
+  }
 
   inline std::weak_ptr<runner_type> get_runner() const { return m_task->get_runner(); }
   const std::shared_ptr<TaskT>& subtask() const        { return m_task; }
@@ -324,15 +376,16 @@ class task<tag::loop, default_runner_type, InputT, ResultT, TaskT>
 
 // ----------------------------------------------------------------------------
 // ----- tag::repeat task
-template <typename InputT, typename ResultT, typename TaskT>
-class task<tag::repeat, default_runner_type, InputT, ResultT, TaskT>
+template <typename InputT, typename TaskT>
+class task<tag::repeat, default_runner_type, InputT, void, TaskT>
 {
  public:
-  using this_type   = task;
-  using result_type = ResultT;
-  using input_type  = InputT;
-  using runner_type = default_runner_type;
-  using tag_type    = tag::repeat;
+  using tag_type     = tag::repeat;
+  using this_type    = task;
+  using runner_type  = default_runner_type;
+  using result_type  = void;
+  using input_type   = InputT;
+  using context_type = exec::context<tag_type, runner_type, input_type, result_type, TaskT>;
 
  public:
   explicit inline task(const std::shared_ptr<TaskT>& t_) : m_task(t_)
@@ -340,12 +393,18 @@ class task<tag::repeat, default_runner_type, InputT, ResultT, TaskT>
 
   inline void run(const std::shared_ptr<this_type>& self_, const InputT& i_)
   {
-    auto stack = new exec::context_stack;
-    create_context(stack, self_, i_);
-    ::cool::async::entrails::kick(stack);
+    try {
+      auto stack = new exec::context_stack;
+      create_context(stack, self_, i_);
+      ::cool::async::entrails::kick(stack);
+    }
+    catch (const nothing_to_run&) { /* noop */ }
+
   }
-  exec::context<tag_type, runner_type, InputT, ResultT, TaskT>*
-  create_context(context_stack* stack_, const std::shared_ptr<this_type>& self_, const InputT& i_);
+  inline context_type* create_context(context_stack* stack_, const std::shared_ptr<this_type>& self_, const InputT& i_)
+  {
+    return context_type::create(stack_, self_, i_);
+  }
 
   inline std::weak_ptr<runner_type> get_runner() const { return m_task->get_runner(); }
   const std::shared_ptr<TaskT>& subtask() const        { return m_task; }
@@ -514,9 +573,33 @@ class context<tag::simple, RunnerT, InputT, ResultT> : public impl::context
 {
  public:
   using task_type  = impl::task<tag::simple, RunnerT, InputT, ResultT>;
+  using this_type  = context;
   using base       = context_base<ResultT>;
 
   public:
+   template<typename T = InputT>
+   inline static context* create(
+           impl::context_stack* st_
+         , const std::shared_ptr<task_type>& t_
+         , const typename std::enable_if<!std::is_same<T, void>::value, T>::type& r_);
+
+  inline static context* create(
+          impl::context_stack* st_
+        , const std::shared_ptr<task_type>& t_);
+
+  // impl::context interface
+  void entry_point(const std::shared_ptr<async::runner>& r_, impl::context* ctx_) override;
+  inline std::weak_ptr<async::runner> get_runner() const override { return m_task->get_runner(); }
+  const char* name() const override   { return "context::simple"; }
+  bool will_execute() const override  { return true; }
+
+  // impl::context_stack interface
+  void push(impl::context*) override { /* noop */ }
+  impl::context* top() override      { return this; }
+  void pop() override                { /* noop */ }
+  bool empty() const override        { return true; }
+
+ private:
    template<typename T = InputT>
    inline context(
            impl::context_stack* st_
@@ -524,29 +607,22 @@ class context<tag::simple, RunnerT, InputT, ResultT> : public impl::context
          , const typename std::enable_if<!std::is_same<T, void>::value, T>::type& r_
          , const typename base::result_reporter& r_rep_ = typename base::result_reporter()
          , const typename base::exception_reporter& e_rep_ = typename base::exception_reporter())
-     : base(st_, r_rep_, e_rep_), m_input(r_), m_task(t_)
-  { /* noop */
-    REP("++++++ context::simple::context");
-    if (st_ != nullptr)
-      st_->push(this);
-  }
+      : base(st_, r_rep_, e_rep_), m_input(r_), m_task(t_)
+    {
+      REP("++++++ context::simple::context non-void");
+      /* noop */
+    }
+
   inline context(
           impl::context_stack* st_
         , const std::shared_ptr<task_type>& t_
         , const typename base::result_reporter& r_rep_ = typename base::result_reporter()
         , const typename base::exception_reporter& e_rep_ = typename base::exception_reporter())
     : base(st_, r_rep_, e_rep_), m_task(t_)
-  { /* noop */ }
-
-  // impl::context interface
-  void entry_point(const std::shared_ptr<async::runner>& r_, impl::context* ctx_) override;
-  inline std::weak_ptr<async::runner> get_runner() const override { return m_task->get_runner(); }
-  const char* name() const override { return "context::simple"; }
-  // impl::context_stack interface
-  void push(impl::context*) override { /* noop */ }
-  impl::context* top() override      { return this; }
-  void pop() override                { /* noop */ }
-  bool empty() const override        { return true; }
+{
+  REP("++++++ context::simple::context void");
+  /* noop */
+}
 
  private:
   container<InputT>              m_input;  // Input to pass to user Callable
@@ -568,15 +644,14 @@ class context<tag::conditional, default_runner_type, InputT, ResultT, TaskT, Tas
 {
  public:
   using task_type = impl::task<tag::conditional, default_runner_type, InputT, ResultT, TaskT, TaskY>;
+  using this_type = context;
   using base      = context_base<ResultT>;
 
  public:
-  inline context(
+  inline static context* create(
           impl::context_stack* st_
         , const std::shared_ptr<task_type>& t_
-        , const InputT& i_
-        , const typename base::result_reporter& r_rep_ = typename base::result_reporter()
-        , const typename base::exception_reporter& e_rep_ = typename base::exception_reporter());
+        , const InputT& i_);
 
   // impl::context interface
   void entry_point(const std::shared_ptr<async::runner>& r_, impl::context* ctx_) override;
@@ -590,18 +665,27 @@ class context<tag::conditional, default_runner_type, InputT, ResultT, TaskT, Tas
     return aux;
   }
   const char* name() const override { return "context::conditional"; }
+  bool will_execute() const override  { return true; }
 
   // exception and result reporting from subtasks
   inline void report_exception(const std::exception_ptr& exc) { m_last_exception = exc; }
 
  private:
-  template <typename T>
-  void prepare_context(const std::shared_ptr<T>& t_, const InputT& i_)
+  inline context(
+          impl::context_stack* st_
+        , const std::shared_ptr<task_type>& t_
+        , const InputT& i_
+        , const typename base::result_reporter& r_rep_ = typename base::result_reporter()
+        , const typename base::exception_reporter& e_rep_ = typename base::exception_reporter())
+    : base(st_, r_rep_, e_rep_)
+    , m_task(t_)
+    , m_this_exc_reporter(std::bind(&context::report_exception, this, std::placeholders::_1))
   {
-    auto ctx = t_->create_context(base::m_stack, t_, i_);
-    ctx->set_exc_reporter(m_this_exc_reporter);
-    ctx->set_res_reporter(generic_reporter<ResultT>::get_subtask_reporter(&m_result));
+    REP("++++++ context::conditional::context");
+    /* noop */
   }
+  template <typename T>
+  void prepare_subcontext(const std::shared_ptr<T>& t_, const InputT& i_);
 
  private:
   bool                              m_pred_result;
@@ -625,35 +709,51 @@ class context<tag::loop, default_runner_type, InputT, ResultT, TaskT>
 {
  public:
   using task_type = impl::task<tag::loop, default_runner_type, InputT, ResultT, TaskT>;
+  using this_type = context;
   using base      = context_base<ResultT>;
 
  public:
-  inline context(
+  inline static context* create(
           impl::context_stack* st_
         , const std::shared_ptr<task_type>& t_
-        , const InputT& i_
-        , const typename base::result_reporter& r_rep_ = typename base::result_reporter()
-        , const typename base::exception_reporter& e_rep_ = typename base::exception_reporter())
-    : base(st_, r_rep_, e_rep_), m_value(i_), m_task(t_)
-  {
-    m_this_exc_reporter = std::bind(&context::report_exception, this, std::placeholders::_1);
-    m_this_res_reporter = std::bind(&context::report_result, this, std::placeholders::_1);
-    REP("++++++ context::loop::context(" << i_ << ")");
-    if (st_ != nullptr)
-      st_->push(this);
-  }
+        , const InputT& i_);
+//  {
+//    m_this_exc_reporter = std::bind(&context::report_exception, this, std::placeholders::_1);
+//    m_this_res_reporter = std::bind(&context::report_result, this, std::placeholders::_1);
+//    if (st_ != nullptr)
+//      st_->push(this);
+//  }
 
   // impl::context interface
   void entry_point(const std::shared_ptr<async::runner>& r_, impl::context* ctx_) override;
   std::weak_ptr<async::runner> get_runner() const override { return m_task->get_runner(); }
   const char* name() const override { return "context::loop"; }
+  bool will_execute() const override  { return true; }
 
   // exception and result reporting from subtasks
   void report_exception(const std::exception_ptr& exc) { m_last_exception = exc; }
   void report_result(const InputT& i_) { m_value = i_; }
 
  private:
+  inline context(
+          impl::context_stack* st_
+        , const std::shared_ptr<task_type>& t_
+        , const InputT& i_
+        , const typename base::result_reporter& r_rep_ = typename base::result_reporter()
+        , const typename base::exception_reporter& e_rep_ = typename base::exception_reporter())
+    : base(st_, r_rep_, e_rep_)
+    , m_value(i_)
+    , m_task(t_)
+    , m_this_exc_reporter(std::bind(&context::report_exception, this, std::placeholders::_1))
+    , m_this_res_reporter(std::bind(&context::report_result, this, std::placeholders::_1))
+  {
+    REP("++++++ context::loop::context(" << i_ << ")");
+    /* noop */
+  }
+
+ private:
   InputT                            m_value;      // input to user lambda and predicate
+  bool                              m_pred_result;
   std::shared_ptr<task_type>        m_task;       // reference to static task data
   typename base::exception_reporter m_this_exc_reporter;
   typename base::result_reporter    m_this_res_reporter;
@@ -667,36 +767,46 @@ class context<tag::loop, default_runner_type, InputT, ResultT, TaskT>
 // ------
 // ------
 // ---------------------------------------------------------------------------
-template <typename InputT, typename ResultT, typename TaskT>
-class context<tag::repeat, default_runner_type, InputT, ResultT, TaskT>
+template <typename InputT, typename TaskT>
+class context<tag::repeat, default_runner_type, InputT, void, TaskT>
     : public impl::context
-    , public context_base<ResultT>
+    , public context_base<void>
 {
  public:
-  using task_type = impl::task<tag::repeat, default_runner_type, InputT, ResultT, TaskT>;
-  using base      = context_base<ResultT>;
+  using task_type = impl::task<tag::repeat, default_runner_type, InputT, void, TaskT>;
+  using this_type = context;
+  using base      = context_base<void>;
 
  public:
+  inline static context* create(
+          impl::context_stack* st_
+        , const std::shared_ptr<task_type>& t_
+        , const InputT& i_);
+
+  // impl::context interface
+  void entry_point(const std::shared_ptr<async::runner>& r_, impl::context* ctx_) override;
+  std::weak_ptr<async::runner> get_runner() const override { return m_task->get_runner(); }
+  const char* name() const override  { return "context::repeat"; }
+  bool will_execute() const override { return m_current <= m_iterations; }
+
+  // exception reporting from subtasks
+  void report_exception(const std::exception_ptr& exc) { m_last_exception = exc; }
+
+ private:
   inline context(
           impl::context_stack* st_
         , const std::shared_ptr<task_type>& t_
         , const InputT& i_
         , const typename base::result_reporter& r_rep_ = typename base::result_reporter()
         , const typename base::exception_reporter& e_rep_ = typename base::exception_reporter())
-    : base(st_, r_rep_, e_rep_), m_iterations(i_), m_current(0), m_task(t_)
+    : base(st_, r_rep_, e_rep_)
+    , m_iterations(i_)
+    , m_current(1)
+    , m_task(t_)
+    , m_this_exc_reporter(std::bind(&this_type::report_exception, this, std::placeholders::_1))
   {
-    m_this_exc_reporter = std::bind(&context::report_exception, this, std::placeholders::_1);
-    if (st_ != nullptr)
-      st_->push(this);
+    REP("++++++ context::repeat::context(" << i_ << ")");
   }
-
-  // impl::context interface
-  void entry_point(const std::shared_ptr<async::runner>& r_, impl::context* ctx_) override;
-  std::weak_ptr<async::runner> get_runner() const override { return m_task->get_runner(); }
-  const char* name() const override { return "context::repeat"; }
-
-  // exception reporting from subtasks
-  void report_exception(const std::exception_ptr& exc) { m_last_exception = exc; }
 
  private:
   const InputT               m_iterations; // number of iterations
@@ -731,26 +841,32 @@ class context<tag::repeat, default_runner_type, InputT, ResultT, TaskT>
 // ----- tag::simple
 // -----
 // ---------------------------------------------------------------------------
-// --- task::create_context
+// --- contest::create
 template <typename RunnerT, typename InputT, typename ResultT>
 template <typename T>
 inline exec::context<tag::simple, RunnerT, InputT, ResultT>*
-task<tag::simple, RunnerT, InputT, ResultT>::create_context(
+exec::context<tag::simple, RunnerT, InputT, ResultT>::create(
       impl::context_stack* stack_
-    , const std::shared_ptr<this_type>& self_
+    , const std::shared_ptr<task_type>& self_
     , const typename std::enable_if<!std::is_same<T, void>::value, T>::type& i_)
 {
-  return new exec::context<tag_type, RunnerT, InputT, ResultT>(stack_, self_, i_);
+  auto aux = new this_type(stack_, self_, i_);
+  if (stack_ != nullptr)
+    stack_->push(aux);
+  return aux;
 }
 
-// --- task::create_context
+// --- context::create
 template <typename RunnerT, typename InputT, typename ResultT>
 inline exec::context<tag::simple, RunnerT, InputT, ResultT>*
-task<tag::simple, RunnerT, InputT, ResultT>::create_context(
+exec::context<tag::simple, RunnerT, InputT, ResultT>::create(
       impl::context_stack* stack_
-    , const std::shared_ptr<this_type>& self_)
+    , const std::shared_ptr<task_type>& self_)
 {
-  return new exec::context<tag_type, RunnerT, InputT, ResultT>(stack_, self_);
+  auto aux = new this_type(stack_, self_);
+  if (stack_ != nullptr)
+    stack_->push(aux);
+  return aux;
 }
 
 // --- context::entry_point
@@ -782,40 +898,40 @@ void exec::context<tag::simple, RunnerT, InputT, ResultT>::entry_point(
 // ----- tag::conditional
 // -----
 // ---------------------------------------------------------------------------
-// --- task::create_context
+
+// --- context::prepare_subcontext
 template <typename InputT, typename ResultT, typename TaskT, typename TaskY>
-inline exec::context<tag::conditional, default_runner_type, InputT, ResultT, TaskT, TaskY>*
-task<tag::conditional, default_runner_type, InputT, ResultT, TaskT, TaskY>::create_context(
-      impl::context_stack* stack_
-    , const std::shared_ptr<this_type>& self_
-    , const InputT& i_)
+template <typename T>
+inline void exec::context<tag::conditional, default_runner_type, InputT, ResultT, TaskT, TaskY>::prepare_subcontext(
+    const std::shared_ptr<T>& t_
+  , const InputT& i_)
 {
-  return new exec::context<tag_type, default_runner_type, InputT, ResultT, TaskT, TaskY>(stack_, self_, i_);
+  auto ctx = t_->create_context(base::m_stack, t_, i_);
+  ctx->set_exc_reporter(m_this_exc_reporter);
+  ctx->set_res_reporter(generic_reporter<ResultT>::get_subtask_reporter(&m_result));
 }
 
-// --- context::context
+// --- context::create
 template <typename InputT, typename ResultT, typename TaskT, typename TaskY>
-exec::context<tag::conditional, default_runner_type, InputT, ResultT, TaskT, TaskY>::context(
-    impl::context_stack* st_
-  , const std::shared_ptr<impl::task<tag::conditional, default_runner_type, InputT, ResultT, TaskT, TaskY>>& t_
-  , const InputT& i_
-  , const typename base::result_reporter& r_rep_
-  , const typename base::exception_reporter& e_rep_)
-      : base(st_, r_rep_, e_rep_), m_task(t_)
+inline exec::context<tag::conditional, default_runner_type, InputT, ResultT, TaskT, TaskY>*
+exec::context<tag::conditional, default_runner_type, InputT, ResultT, TaskT, TaskY>::create(
+      impl::context_stack* stack_
+    , const std::shared_ptr<task_type>& task_
+    , const InputT& i_)
 {
-  REP("++++++ context::conditional::context");
+  auto aux = new this_type(stack_, task_, i_);
   // push immediatelly so that the context of "if" or "else" task comes on the top
-  if (st_ != nullptr)
-    st_->push(this);
+  if (stack_ != nullptr)
+    stack_->push(aux);
 
-  m_this_exc_reporter = std::bind(&context::report_exception, this, std::placeholders::_1);
+  aux->m_pred_result = task_->predicate()(i_);
 
-  // evaluate predicate and create the appropriate task's context and push it on the top
-  m_pred_result = m_task->predicate()(i_);
-  if (m_pred_result)
-    prepare_context(m_task->task_if(), i_);
+  if (aux->m_pred_result)
+    aux->prepare_subcontext(task_->task_if(), i_);
   else
-    prepare_context(m_task->task_else(), i_);
+    aux->prepare_subcontext(task_->task_else(), i_);
+
+  return aux;
 }
 
 // context::entry_point
@@ -846,13 +962,25 @@ void exec::context<tag::conditional, default_runner_type, InputT, ResultT, TaskT
 // ----- task::create_context
 template <typename InputT, typename ResultT, typename TaskT>
 inline exec::context<tag::loop, default_runner_type, InputT, ResultT, TaskT>*
-task<tag::loop, default_runner_type, InputT, ResultT, TaskT>::create_context(
+exec::context<tag::loop, default_runner_type, InputT, ResultT, TaskT>::create(
       impl::context_stack* stack_
-    , const std::shared_ptr<this_type> &self_
+    , const std::shared_ptr<task_type> &task_
     , const InputT &i_)
 {
-  return new exec::context<tag_type, default_runner_type, InputT, ResultT, TaskT>(stack_, self_, i_);
+  if (!task_->predicate()(i_))
+    throw nothing_to_run();
+
+  auto aux = new this_type(stack_, task_, i_);
+  if (stack_ != nullptr)
+    stack_->push(aux);
+
+  auto ctx = task_->subtask()->create_context(stack_, task_->subtask(), aux->m_value);
+  ctx->set_exc_reporter(aux->m_this_exc_reporter);
+  ctx->set_res_reporter(aux->m_this_res_reporter);
+
+  return aux;
 }
+
 // ----- context::entry_point
 template <typename InputT, typename ResultT, typename TaskT>
 void exec::context<tag::loop, default_runner_type, InputT, ResultT, TaskT>::entry_point(
@@ -899,18 +1027,29 @@ void exec::context<tag::loop, default_runner_type, InputT, ResultT, TaskT>::entr
 // -----
 // ---------------------------------------------------------------------------
 // ----- task::create_context
-template <typename InputT, typename ResultT, typename TaskT>
-inline exec::context<tag::repeat, default_runner_type, InputT, ResultT, TaskT>*
-task<tag::repeat, default_runner_type, InputT, ResultT, TaskT>::create_context(
+template <typename InputT, typename TaskT>
+inline exec::context<tag::repeat, default_runner_type, InputT, void, TaskT>*
+exec::context<tag::repeat, default_runner_type, InputT, void, TaskT>::create(
       impl::context_stack* stack_
-    , const std::shared_ptr<this_type> &self_
+    , const std::shared_ptr<task_type> &task_
     , const InputT &i_)
 {
-  return new exec::context<tag_type, default_runner_type, InputT, ResultT, TaskT>(stack_, self_, i_);
+  if (i_ <= 0)
+    throw nothing_to_run();
+
+  auto aux =   new this_type(stack_, task_, i_);
+  if (stack_ != nullptr)
+    stack_->push(aux);
+
+  auto ctx = task_->subtask()->create_context(stack_, task_->subtask(), aux->m_current);
+  ctx->set_exc_reporter(aux->m_this_exc_reporter);
+
+  return aux;
 }
+
 // ----- context::entry_point
-template <typename InputT, typename ResultT, typename TaskT>
-void exec::context<tag::repeat, default_runner_type, InputT, ResultT, TaskT>::entry_point(
+template <typename InputT, typename TaskT>
+void exec::context<tag::repeat, default_runner_type, InputT, void, TaskT>::entry_point(
       const std::shared_ptr<async::runner> &r_
     , impl::context *ctx_)
 {
