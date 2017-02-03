@@ -818,6 +818,7 @@ private:
 
  private:
   static void timer_handler(void* ctx);
+  static void cancel_handler(void *ctx);
   dlldecl void _set_period(uint64_t period, uint64_t leeway);
 
  private:
@@ -1046,6 +1047,7 @@ class data_observer : public entrails::async_source<std::function<void(unsigned 
 
  private:
   static void handler(void* ctx);
+  static void cancel_handler(void *ctx);
 };
 
 // --------------------------------------------------------------------------
@@ -1140,6 +1142,7 @@ class proc_observer : public entrails::async_source<std::function<void(unsigned 
 
  private:
   static void handler(void* ctx);
+  static void cancel_handler(void *ctx);
 };
 #endif
 

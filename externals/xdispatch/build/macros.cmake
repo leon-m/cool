@@ -113,9 +113,8 @@ endmacro()
 
 macro(__mz_add_target NAME FOLDER)
     get_filename_component(_ABS_FOLDER ${FOLDER} ABSOLUTE)
-    file(RELATIVE_PATH _REL_FOLDER ${CMAKE_SOURCE_DIR} ${_ABS_FOLDER})
-
-    add_subdirectory(${FOLDER} ${CMAKE_BINARY_DIR}/${_REL_FOLDER})
+    file(RELATIVE_PATH _REL_FOLDER ${CMAKE_CURRENT_SOURCE_DIR} ${_ABS_FOLDER})
+    add_subdirectory(${FOLDER} ${CMAKE_CURRENT_BINARY_DIR}/${_REL_FOLDER})
 endmacro()
 
 macro(mz_target_props NAME)
