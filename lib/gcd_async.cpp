@@ -82,13 +82,91 @@ void fd_io::event_cb(void *ctx)
 
 #if defined(APPLE_TARGET) || defined(LINUX_TARGET)
 
-writer::writer(int fd, const task::runner& run, const handler_t& cb, const err_handler_t& ecb, bool owner)
-  : m_writer(fd, std::bind(&writer::write_cb, this, std::placeholders::_1, std::placeholders::_2), run, owner)
-  , m_data(nullptr)
-  , m_cb(cb)
-  , m_err_cb(ecb)
-  , m_busy(false)
-{ /* noop */ }
+// ---------------------------------------------------------------------------
+// -----
+// ----- Writer object implementation. Rather than passing the file descriptor
+// ----- read ready events into the user code it accepts a buffer to write
+// ----- and triggers an event when entire buffer was written
+// -----
+// ---------------------------------------------------------------------------
+
+writer::writer(int fd
+             , const task::runner& run
+             , const handler_t& cb
+             , const err_handler_t& ecb
+             , bool owner)
+{
+  // need temp variable as runner -> dispatch_queue_t conversion is
+  // private and std::make_shared is not a friend of the runner
+  ::dispatch_queue_t q = run;
+  m_impl = std::make_shared<entrails::writer>(fd, q, cb, ecb, owner);
+  m_impl->self(m_impl);
+}
+
+void writer::write(const void *data, std::size_t size)
+{
+  m_impl->write(data, size);
+}
+
+bool writer::is_busy() const
+{
+  return m_impl->busy();
+}
+
+namespace entrails {
+
+struct writer_context
+{
+  writer::weak_ptr    m_writer;
+  conditionally_owned m_fd;
+  dispatch_source_t   m_source;
+};
+
+writer::writer(int fd_
+             , const dispatch_queue_t& r_
+             , const write_complete_handler& h_
+             , const error_handler& eh_
+             , bool owner_)
+   : m_suspended(true)
+   , m_handler(h_)
+   , m_herror(eh_)
+   , m_busy(false)
+   , m_data(nullptr)
+{
+  // note: this context will be deleted in cancel callback
+  m_context = new writer_context;
+  m_context->m_fd = conditionally_owned(fd_, owner_);
+  m_context->m_source = ::dispatch_source_create(DISPATCH_SOURCE_TYPE_WRITE, fd_, 0, r_);
+
+  ::dispatch_source_set_cancel_handler_f(m_context->m_source, cancel_callback);
+  ::dispatch_source_set_event_handler_f(m_context->m_source, event_callback);
+  ::dispatch_set_context(m_context->m_source, m_context);
+}
+
+writer::~writer()
+{
+  resume();
+  ::dispatch_source_cancel(m_context->m_source);
+}
+
+void writer::self(const weak_ptr& self_)
+{
+  m_context->m_writer = self_;
+}
+
+void writer::resume()
+{
+  bool expected = true;
+  if (m_suspended.compare_exchange_strong(expected, false))
+    ::dispatch_resume(m_context->m_source);
+}
+
+void writer::suspend()
+{
+  bool expected = false;
+  if (m_suspended.compare_exchange_strong(expected, true))
+    ::dispatch_suspend(m_context->m_source);
+}
 
 void writer::write(const void *data, std::size_t size)
 {
@@ -100,32 +178,50 @@ void writer::write(const void *data, std::size_t size)
   m_size = size;
   m_remain = size;
   m_position = static_cast<const std::uint8_t*>(data);
-  m_writer.start();
+  resume();
 }
 
-void writer::set_idle()
+void writer::idle()
 {
-  m_writer.stop();
+  suspend();
   m_data = nullptr;
   m_busy = false;
 }
 
-void writer::write_cb(int fd, std::size_t n)
+void writer::cancel_callback(void *ctx)
+{
+  auto context = static_cast<writer_context*>(ctx);
+  ::dispatch_release(context->m_source);
+  if (context->m_fd.is_owner)
+    ::close(context->m_fd.fd);
+
+  delete context;
+}
+
+void writer::event_callback(void *ctx)
+{
+  auto self = static_cast<writer_context*>(ctx)->m_writer.lock();
+  if (!self)
+    return;
+  std::size_t size = ::dispatch_source_get_data(self->m_context->m_source);
+  self->write_ready_callback(size);
+}
+
+void writer::write_ready_callback(std::size_t size_)
 {
   if (m_remain == 0)
     return;
 
-  auto res = ::write(fd, m_position, m_remain);
+  auto res = ::write(m_context->m_fd.fd, m_position, m_remain);
 
-  // upon error disable current write operation and invoke error callback
+  // upon error cancel current write operation and invoke error callback
   if (res < 0)
   {
     auto err = errno;
-    set_idle();
-    if (m_err_cb)
-      m_err_cb(err);
+    idle();
+    if (m_herror)
+      m_herror(err);
 
-    m_busy = false;
     return;
   }
 
@@ -134,11 +230,14 @@ void writer::write_cb(int fd, std::size_t n)
 
   if (m_remain == 0)
   {
-    set_idle();
-    if (m_cb)
-      m_cb(m_data, m_size);
+    idle();
+    if (m_handler)
+      m_handler(m_data, m_size);
   }
 }
+
+} // namespace
+
 
 // NOTE: below dup is necessary as ubuntu 16.04 does not run read and
 // write event sources on the same file descriptor
@@ -151,6 +250,7 @@ reader_writer::reader_writer(int fd,
     : m_rd(fd, run, rd_cb, owner)
     , m_wr(::dup(fd), run, wr_cb, err_cb, true)
 { /* noop */ }
+
 #endif
 // --------------------------------------------------------------------------
 // --------------------------------------------------------------------------

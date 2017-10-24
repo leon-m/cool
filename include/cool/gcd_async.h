@@ -153,13 +153,16 @@ class writer
    * The user callback type.
    *
    * The callback type of the user function object to be called upon
-   * the write completion. When called, the handler receives the following
-   * parameters:
-   *
+   * the write completion. The handler must be assignable to <tt>std::function</tt>
+   * object with the following signature:
+   * @code
+   *   std::function<void(const void* data, std::size_t count)>
+   * @endcode
+   * When called, the handler receives the following parameters:
    * @param data pointer to the data buffer specified to the read() method
    * @param count number of bytes written
    */
-  typedef std::function<void(const void *, std::size_t)> handler_t;
+  using handler_t = entrails::write_complete_handler;
   /**
    * The user callback type.
    *
@@ -167,7 +170,7 @@ class writer
    * error during write. The argument is the <i>errno</i>. Note that
    * upon error the current write request is cancelled.
    */
-  typedef std::function<void(int)> err_handler_t;
+  using err_handler_t = entrails::error_handler;
 
  public:
   /**
@@ -216,21 +219,10 @@ class writer
    * This predicate returns true if write operation is in progress and
    * another write request would throw.
    */
-  bool is_busy() const { return m_busy; }
+  bool is_busy() const;
 
  private:
-  void write_cb(int fd, std::size_t size);
-  void set_idle();
-
- private:
-  entrails::async_writer m_writer;
-  std::size_t            m_size;
-  const void*            m_data;
-  std::size_t            m_remain;
-  const std::uint8_t*    m_position;
-  handler_t              m_cb;
-  err_handler_t          m_err_cb;
-  std::atomic_bool       m_busy;
+  entrails::writer::ptr m_impl;
 
 };
 #endif

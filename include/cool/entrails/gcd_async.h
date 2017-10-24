@@ -32,6 +32,49 @@ namespace cool { namespace gcd { namespace async {
 
 namespace entrails {
 
+// -- context base class - every event source has this elements
+template <typename Handler> class context_base
+{
+ public:
+  context_base(const dispatch_source_t& s_, const Handler& h_)
+    : m_source(s_)
+#if !defined(WIN32_TARGET)
+    , m_suspended(true)
+#endif
+    , m_handler(h_)
+  {
+#if defined(WIN32_TARGET)
+    m_suspended = true;
+#endif
+  }
+  ~context_base()
+  {
+  }
+
+  void resume()
+  {
+    bool expected = true;
+    if (m_suspended.compare_exchange_strong(expected, false))
+      ::dispatch_resume(m_source);
+  }
+
+  void suspend()
+  {
+    bool expected = false;
+    if (m_suspended.compare_exchange_strong(expected, true))
+      ::dispatch_suspend(m_source);
+  }
+
+  const Handler& handler() const  { return m_handler; }
+  const dispatch_source_t& event_source() const { return m_source; }
+  dispatch_source_t& event_source() { return m_source; }
+
+ private:
+  dispatch_source_t m_source;
+  std::atomic_bool  m_suspended;
+  Handler           m_handler;
+};
+
 // -- Conditionally owned file descriptor
 struct conditionally_owned
 {
@@ -268,18 +311,70 @@ class fd_io : public async_source<std::function<void(int, std::size_t)>, conditi
   static void event_cb(void* ctx);
 };
 
+// -------------------------------------------------------------------------
+// -----
+// ----- Writer needs different implementation as it translates raw
+// ----- write ready file descriptor events into write complete application
+// ----- level events. The callbacks as stored by context_base template
+// ----- would therefore not be made into user code but an interim object
+// ----- which could go away too early - hence the context needs a weak
+// ----- pointer to the writer object to check if it's still there.
+// -----
+// -------------------------------------------------------------------------
 
-class async_writer : public fd_io
+using write_complete_handler = std::function<void(const void *, std::size_t)>;
+using error_handler = std::function<void(int)>;
+
+// defined in implementation file. Among other things contains weak_ptr
+// to below writer object
+struct writer_context;
+
+class writer
 {
  public:
-  async_writer(int fd, const handler_t& cb, const dispatch_queue_t& run, bool owner)
-      : fd_io(DISPATCH_SOURCE_TYPE_WRITE, fd, cb, run, owner)
-  { /* noop */ }
+  using ptr      = std::shared_ptr<writer>;
+  using weak_ptr = std::weak_ptr<writer>;
 
-  void start() { resume(); }
-  void stop() { suspend(); }
-  int fd() const { return fd_io::fd(); }
+ public:
+  writer(int fd_
+       , const dispatch_queue_t& r_
+       , const write_complete_handler& h_
+       , const error_handler& eh_
+       , bool owner_);
+  ~writer();
+
+  void self(const weak_ptr& self_);
+  void write(const void *data, std::size_t size);
+  bool busy() const { return m_busy; }
+
+ private:
+  void idle();
+  void suspend();
+  void resume();
+
+  static void cancel_callback(void* ctx);
+  static void event_callback(void* ctx);
+
+  void write_ready_callback(std::size_t size_);
+
+ private:
+  // runtime context
+  writer_context*        m_context;
+  // suspend/resume traking flag
+  std::atomic_bool       m_suspended;
+  // user handlers
+  write_complete_handler m_handler;
+  error_handler          m_herror;
+  // write operation info
+  std::atomic_bool       m_busy;
+  std::size_t            m_size;
+  const void*            m_data;
+  std::size_t            m_remain;
+  const std::uint8_t*    m_position;
 };
+
+
+
 #endif
 
 
