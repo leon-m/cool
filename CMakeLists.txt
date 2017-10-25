@@ -130,10 +130,14 @@ if (OSX)
   set(DISABLED_WARNINGS -Wno-undefined-bool-conversion)
 endif()
 
-if (WIN32)
-  set (CMAKE_CXX_FLAGS "/EHsc")
-else()
-  set (CMAKE_CXX_FLAGS "-std=c++11 -g ${DISABLED_WARNINGS}")
+if ( NOT COOL_DO_NOT_SET_COMPILER_FLAGS )
+
+  if (WIN32)
+    set (CMAKE_CXX_FLAGS "/EHsc")
+  else()
+    set (CMAKE_CXX_FLAGS "-std=c++11 -g ${DISABLED_WARNINGS}")
+  endif()
+
 endif()
 
 if (WIN32)
