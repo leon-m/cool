@@ -50,7 +50,7 @@ class server : public task::runner
              , public waiter
 {
  public:
-  enum class mode { reader, reader_writer };
+  enum class mode { reader, reader_writer, periodic_writer };
 
  public:
   server(mode = mode::reader);
@@ -78,6 +78,7 @@ class server : public task::runner
   int m_work_socket;
   std::unique_ptr<async::reader> m_listener;
   std::unique_ptr<async::reader_writer> m_receiver;
+  std::unique_ptr<async::writer> m_writer;
   uint8_t m_buffer[block_size];
   std::size_t m_rx_size;
   std::size_t m_tx_size;
@@ -116,7 +117,7 @@ class rw_client : public task::runner
  public:
   rw_client();
   ~rw_client();
-  void start()   { m_writer->write(m_buffer, block_size); }
+  void start()                { m_writer->write(m_buffer, block_size); }
   void shudown();
   std::size_t rx_size() const { return m_rx_size; }
   std::size_t tx_size() const { return m_tx_size; }
@@ -141,7 +142,9 @@ class rw_client : public task::runner
   uint8_t m_buffer[block_size];
 };
 
-server::server(mode m) : m_mode(m), m_r_complete(false), m_w_complete(false), m_got_close(false), m_rx_size(0), m_tx_size(0)
+server::server(mode m)
+  : m_mode(m), m_r_complete(false), m_w_complete(false)
+  , m_got_close(false), m_rx_size(0), m_tx_size(0)
 {
   sockaddr_in addr;
   addr.sin_family = AF_INET;
@@ -208,6 +211,10 @@ void server::accept(int fd, std::size_t size)
         , true));
       ASSERT_TRUE(!!m_receiver);
       m_receiver->start();
+      break;
+
+    case mode::periodic_writer:
+
       break;
 
     default:
@@ -446,6 +453,4 @@ TEST(reader_writer, bidirectional_server_close)
   EXPECT_TRUE(clt.got_close());
 
 }
-
-
 
