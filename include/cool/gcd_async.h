@@ -107,7 +107,7 @@ class reader : public entrails::fd_io
       : entrails::fd_io(DISPATCH_SOURCE_TYPE_READ, fd, cb, run, owner)
   {
     if (fd < 0)
-      throw std::range_error("reader::fd");
+      throw exception::out_of_range("reader::fd");
   }
 
   /**
