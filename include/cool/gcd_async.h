@@ -105,7 +105,10 @@ class reader : public entrails::fd_io
    */
   reader(int fd, const task::runner& run, const handler_t& cb, bool owner = true)
       : entrails::fd_io(DISPATCH_SOURCE_TYPE_READ, fd, cb, run, owner)
-  { /* noop */ }
+  {
+    if (fd < 0)
+      throw exception::out_of_range("reader::fd");
+  }
 
   /**
    * Start the asynchronous reader.

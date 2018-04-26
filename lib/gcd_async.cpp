@@ -96,6 +96,9 @@ writer::writer(int fd
              , const err_handler_t& ecb
              , bool owner)
 {
+  if (fd < 0)
+    throw exception::out_of_range("writer::fd");
+
   // need temp variable as runner -> dispatch_queue_t conversion is
   // private and std::make_shared is not a friend of the runner
   ::dispatch_queue_t q = run;
